@@ -1,0 +1,6 @@
+[submodule "external/wil"]
+	path = external/wil
+	url = https://github.com/microsoft/wil
+[submodule "external/ValveFileVDF"]
+	path = external/ValveFileVDF
+	url = https://github.com/TinyTinni/ValveFileVDF

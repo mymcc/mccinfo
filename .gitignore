@@ -1,0 +1,23 @@
+.vs/
+
+# Visual Studio Files
+**.sln
+**.vcxproj
+**.vcxproj.user
+**.vcxproj.filters
+
+# Output
+bin/
+bin-int/
+docs/
+include/README.md
+
+**.ini
+**.log
+**.bin
+**.idx
+**.pyc
+
+# Deps
+external/cache/*
+external/7z2201-x64/*
