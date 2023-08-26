@@ -25,5 +25,9 @@ int main(int argc, char** argv) {
 		std::wcout << std::left << std::setw(align) << L"MCC PID: " << pid.value() << std::endl;
 	}
 
+    mccinfo::StartETW();
+
+	//mccinfo::StartTempWatchdog();
+
 	return 0;
 }

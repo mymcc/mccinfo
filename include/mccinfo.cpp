@@ -1,4 +1,6 @@
 #include "mccinfo.h"
+#include "mccfsm.h"
+
 namespace mccinfo {
 namespace {
 std::optional<std::vector<char>> SlurpFile(const std::filesystem::path path) {
@@ -95,6 +97,60 @@ std::optional<size_t> GetProcessIDFromName(const std::wstring &process_name) {
     return std::nullopt;
 }
 
+std::optional<size_t> GetParentProcessID(size_t pid) {
+    HANDLE hSnapshot;
+    PROCESSENTRY32 pe;
+    size_t ppid = 0;
+    BOOL hResult;
+
+    hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (INVALID_HANDLE_VALUE == hSnapshot)
+        return std::nullopt;
+
+    pe.dwSize = sizeof(PROCESSENTRY32);
+    hResult = Process32First(hSnapshot, &pe);
+
+    while (hResult) {
+        if (pid == pe.th32ProcessID) {
+            ppid = pe.th32ParentProcessID;
+            CloseHandle(hSnapshot);
+            return ppid;
+        }
+        hResult = Process32Next(hSnapshot, &pe);
+    }
+    CloseHandle(hSnapshot);
+    return std::nullopt;
+}
+
+bool IsThreadInProcess(DWORD threadID, DWORD processID) {
+    // Take a snapshot of all running threads
+    HANDLE hThreadSnap = CreateToolhelp32Snapshot(TH32CS_SNAPTHREAD, 0);
+    if (hThreadSnap == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+
+    THREADENTRY32 te32;
+    te32.dwSize = sizeof(THREADENTRY32);
+
+    // Get the information about the first thread
+    if (!Thread32First(hThreadSnap, &te32)) {
+        CloseHandle(hThreadSnap);
+        return false;
+    }
+
+    // Now walk the thread list of the system
+    do {
+        if (te32.th32OwnerProcessID == processID && te32.th32ThreadID == threadID) {
+            // Found a thread with the given thread ID that belongs to the process with the given process ID
+            CloseHandle(hThreadSnap);
+            return true;
+        }
+    } while (Thread32Next(hThreadSnap, &te32));
+
+    CloseHandle(hThreadSnap);
+    return false;
+}
+
 std::optional<std::filesystem::path> ExpandPath(const std::filesystem::path &path) {
     std::wstring dst;
     dst.resize(MAX_PATH);
@@ -155,6 +211,7 @@ std::optional<MCCInstallInfo> LookForInstallInfoImpl (
     }
     return std::nullopt;
 }
+
 std::optional<std::wstring> ConvertBytesToWString(const std::string &bytes) {
     int required_size =
         MultiByteToWideChar(CP_UTF8, 0, bytes.data(), static_cast<int>(bytes.size()), nullptr, 0);
@@ -164,6 +221,19 @@ std::optional<std::wstring> ConvertBytesToWString(const std::string &bytes) {
     std::wstring result(static_cast<size_t>(required_size), L'\0');
     int converted = MultiByteToWideChar(CP_UTF8, 0, bytes.data(), static_cast<int>(bytes.size()),
                                         &result[0], required_size);
+    if (converted == 0)
+        return std::nullopt;
+
+    return result;
+}
+
+std::optional<std::string> ConvertWStringToBytes(const std::wstring& wstr) {
+    int required_size = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), static_cast<int>(wstr.size()), nullptr, 0, nullptr, nullptr);
+    if (required_size == 0)
+        return std::nullopt;
+
+    std::string result(static_cast<size_t>(required_size), '\0');
+    int converted = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), static_cast<int>(wstr.size()), &result[0], required_size, nullptr, nullptr);
     if (converted == 0)
         return std::nullopt;
 
@@ -362,4 +432,287 @@ std::optional<MCCInstallInfo> LookForSteamInstallInfo(void) {
 std::optional<MCCInstallInfo> LookForMicrosoftStoreInstallInfo(void) {
     return LookForInstallInfo(StoreVersion::MicrosoftStore);
 }
+
+constexpr std::array<size_t, 4> name_events {
+    0, 32, 35, 36
+};
+
+constexpr std::array<size_t, 5> events {
+    69, 70, 71, 74, 75
+};
+
+const std::unordered_map<size_t, std::wstring_view> eventToWstring {
+    {69, L"SetInfo"}, { 70, L"Delete" }, { 71, L"Rename" }, { 74, L"QueryInfo" }, { 75, L"FSControl" }
+};
+
+std::unordered_map<uint32_t*, std::wstring> FileKeyMap;
+
+constexpr std::array<uint32_t, 5> process_events {
+    1, 2, 3, 4, 11
+};
+
+krabs::event_filter MakeProcessFilter(void) {
+    static std::array<krabs::predicates::opcode_is, 5> opcode_predicates {
+        krabs::predicates::opcode_is(process_events[0]),
+        krabs::predicates::opcode_is(process_events[1]),
+        krabs::predicates::opcode_is(process_events[2]),
+        krabs::predicates::opcode_is(process_events[3]),
+        krabs::predicates::opcode_is(process_events[4]),
+    };
+
+    // This isn't sufficient at filtering:
+    // Process_Terminate (opcode: 11, Event ID: 0, Event Version(2))
+    // just before Process_End ... bug in etw? - Stehfyn 8/24/23
+    static krabs::predicates::version_is version_is(3);
+    static krabs::event_filter filter {
+        krabs::predicates::and_filter(
+            krabs::predicates::any_of({
+                &opcode_predicates[0],
+                &opcode_predicates[1],
+                &opcode_predicates[2],
+                &opcode_predicates[3],
+                }),
+            krabs::predicates::all_of({ 
+                &version_is,
+                })
+        )
+    };
+    return filter;
+}
+krabs::event_filter MakeProcessFilter2(void) {
+    auto start = krabs::predicates::opcode_is(1);
+    auto name = krabs::predicates::property_equals(L"ImageFileName", std::wstring(L"mcclauncher.exe"));
+
+    krabs::event_filter filter {
+        krabs::predicates::all_of({
+                &start,
+                &name
+            })
+    };
+
+    return filter;
+}
+#define PRINT_LIMIT 3 // only print a few events for brevity
+void process_rundown_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context);
+void file_rundown_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context);
+void hwconfig_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context);
+
+bool StartETW(void)
+{
+    
+// we will make different filters, attach different callbacks that dispatch their respective event.
+// like a successful predicate filter should elicit next_predicate_in_seq
+// but a process end for mcc should elicit terminate, but only if its a pid we recognized to be on and were tracking
+
+
+
+    fsm_handle::start();
+    krabs::kernel_trace trace(L"kernel_trace");
+    fsm_kernel_process_provider process_provider;
+
+    fsm_handle::dispatch(SequenceStart(&process_provider));
+
+    trace.enable(process_provider);
+
+    //krabs::kernel::disk_file_io_provider file_io_provider;
+    //file_io_provider.add_on_event_callback(file_rundown_callback);
+    ////trace.enable(file_io_provider);
+    //
+    //krabs::kernel_provider hwconfig_provider(0, krabs::guids::event_trace_config);
+    //hwconfig_provider.add_on_event_callback(hwconfig_callback);
+    //trace.enable(hwconfig_provider);
+
+    //krabs::kernel_trace trace2(L"kernel_trace2");
+    //krabs::kernel::disk_file_io_provider
+
+    std::cout << " - starting trace" << std::endl;
+
+    std::thread thread([&trace]() { trace.start(); });
+
+    // We will wait for all start events to be processed.
+    // By default ETW buffers are flush when full, or every second otherwise
+    Sleep(60000);
+
+    std::cout << std::endl << " - stopping trace" << std::endl;
+    trace.stop();
+    thread.join();
+    return true;
+}
+void process_rundown_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+    krabs::schema schema(record, trace_context.schema_locator);
+    krabs::parser parser(schema);
+    if (schema.event_opcode() != 11) { // Prevent Process_Terminate (Event Version(2))
+        std::string imagefilename = parser.parse<std::string>(L"ImageFileName");
+        //ProcessEntry pe({ (uint32_t)schema.event_opcode(), imagefilename });
+        //fsm_handle::dispatch(pe);
+
+        std::wcout << schema.task_name() << L"_" << schema.opcode_name();
+        std::wcout << L" (" << schema.event_opcode() << L") ";
+        std::uint32_t pid = parser.parse<std::uint32_t>(L"ProcessId");
+        std::wcout << L" ProcessId=" << pid;
+        auto ppid = GetParentProcessID(pid);
+        if (ppid.has_value()) {
+            std::cout << " ParentProcessId=" << ppid.value();
+        }
+        std::cout << " ImageFileName=" << imagefilename;
+        
+        std::wcout << std::endl;
+    }
+}
+
+void file_rundown_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+    static int file_rundown_count = 0;
+
+    if ((record.EventHeader.EventDescriptor.Opcode == 0) ||
+        (record.EventHeader.EventDescriptor.Opcode == 32)) {  // FileRundown
+        krabs::schema schema(record, trace_context.schema_locator);
+        if (file_rundown_count++ >= 0) {
+            std::wcout << schema.task_name() << L"_" << schema.opcode_name();
+            std::wcout << L" (" << schema.event_opcode() << L") ";
+            krabs::parser parser(schema);
+            std::wstring filename = parser.parse<std::wstring>(L"FileName");
+            std::wcout << L" FileName=" << filename;
+            std::wcout << std::endl;
+        }
+
+        if (file_rundown_count == PRINT_LIMIT)
+            std::wcout << schema.task_name() << L"_" << schema.opcode_name() << L"..." << std::endl;
+    }
+}
+
+void hwconfig_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+    // only return some events for brevity
+    if (record.EventHeader.EventDescriptor.Opcode == 10 || // CPU
+        record.EventHeader.EventDescriptor.Opcode == 25 || // Platform
+        record.EventHeader.EventDescriptor.Opcode == 33 || // DeviceFamily
+        record.EventHeader.EventDescriptor.Opcode == 37) { // Boot Config Info
+        krabs::schema schema(record, trace_context.schema_locator);
+        std::wcout << L"task_name=" << schema.task_name();
+        std::wcout << L" opcode=" << schema.event_opcode();
+        std::wcout << L" opcode_name=" << schema.opcode_name();
+        std::wcout << std::endl;
+    }
+}
+/*
+bool StartTempWatchdog(void)
+{
+    auto temp = LookForMCCTempPath();
+    auto temp2 = LookForMCCMicrosoftStoreInstallPath();
+    if (temp.has_value() && temp2.has_value()) {
+        std::wofstream file(L"watchdog.log", std::ios::app | std::ios::out);
+        auto reader1 = wil::make_folder_change_reader(temp.value().c_str(), true, wil::FolderChangeEvents::All, [&](wil::FolderChangeEvent event, PCWSTR fileName)
+        {
+                switch (event)
+                {
+                case wil::FolderChangeEvent::ChangesLost: {
+                    std::wstringstream wss;
+                    wss << L"Changes Lost, " << fileName << std::endl;
+                    std::wcout << wss.str();
+                    file << wss.str();
+                    file.flush();
+                    break;
+                }
+                case wil::FolderChangeEvent::Added: {
+                    std::wstringstream wss;
+                    wss << L"File Added, " << fileName << std::endl;
+                    std::wcout << wss.str();
+                    file << wss.str();
+                    file.flush();
+                    break;
+                }
+                case wil::FolderChangeEvent::Removed: {
+                    std::wstringstream wss;
+                    wss << L"File Removed, " << fileName << std::endl;
+                    std::wcout << wss.str();
+                    file << wss.str();
+                    file.flush();
+                    break;
+                }
+                case wil::FolderChangeEvent::Modified: {
+                    std::wstringstream wss;
+                    wss << L"File Modified, " << fileName << std::endl;
+                    std::wcout << wss.str();
+                    file << wss.str();
+                    file.flush();
+                    break;
+                }
+                case wil::FolderChangeEvent::RenameOldName: {
+                    std::wstringstream wss;
+                    wss << L"File Renamed (Old), " << fileName << std::endl;
+                    std::wcout << wss.str();
+                    file << wss.str();
+                    file.flush();
+                    break;
+                }
+                case wil::FolderChangeEvent::RenameNewName: {
+                    std::wstringstream wss;
+                    wss << L"File Renamed (New), " << fileName << std::endl;
+                    std::wcout << wss.str();
+                    file << wss.str();
+                    file.flush();
+                    break;
+                }
+                default: break;
+                }
+        });
+        
+        auto reader2 = wil::make_folder_change_reader((temp2.value()).c_str(), true, wil::FolderChangeEvents::All, [&](wil::FolderChangeEvent event, PCWSTR fileName)
+            {
+                switch (event)
+                {
+                case wil::FolderChangeEvent::ChangesLost: {
+                    std::wstringstream wss;
+                    wss << L"Changes Lost, " << fileName << std::endl;
+                    std::wcout << wss.str();
+                    file << wss.str();
+                    file.flush();
+                    break;
+                }
+                case wil::FolderChangeEvent::Added: {
+                    std::wstringstream wss;
+                    wss << L"File Added, " << fileName << std::endl;
+                    std::wcout << wss.str();
+                    file << wss.str();
+                    file.flush();
+                    break;
+                }
+                case wil::FolderChangeEvent::Removed: {
+                    std::wstringstream wss;
+                    wss << L"File Removed, " << fileName << std::endl;
+                    std::wcout << wss.str();
+                    file << wss.str();
+                    file.flush();
+                    break;
+                }
+                case wil::FolderChangeEvent::Modified: {
+                    std::wstringstream wss;
+                    wss << L"File Modified, " << fileName << std::endl;
+                    std::wcout << wss.str();
+                    file << wss.str();
+                    file.flush();
+                    break;
+                }
+                case wil::FolderChangeEvent::RenameOldName: {
+                    std::wstringstream wss;
+                    wss << L"File Renamed (Old), " << fileName << std::endl;
+                    std::wcout << wss.str();
+                    file << wss.str();
+                    file.flush();
+                    break;
+                }
+                case wil::FolderChangeEvent::RenameNewName: {
+                    std::wstringstream wss;
+                    wss << L"File Renamed (New), " << fileName << std::endl;
+                    std::wcout << wss.str();
+                    file << wss.str();
+                    file.flush();
+                    break;
+                }
+                default: break;
+                }
+            });
+        while (true);
+    }
+    return false;
+}*/
 } // namespace mccinfo

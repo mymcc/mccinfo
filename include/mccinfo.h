@@ -1,23 +1,29 @@
 #pragma once
 
-#include <windows.h>
+#include <krabs/krabs.hpp> //#include <windows.h>
 #include <tlhelp32.h>
 
 #include <string>
 #include <optional>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <filesystem>
 #include <vector>
 #include <array>
 #include <unordered_map>
+#include <type_traits>
+
 #include <wil/filesystem.h>
 #include <wil/registry.h>
+#include <tinyfsm.hpp>
 
 #pragma warning(push)
 #pragma warning(disable : 4996)
 #include <vdf_parser.hpp>
 #pragma warning(pop)
+
+
 
 namespace mccinfo {
 /**
@@ -31,11 +37,13 @@ constexpr size_t MCCSteamAppID = 976730;
  * Collection&trade;.
  */
 constexpr std::wstring_view SteamMCCexe = L"MCC-Win64-Shipping.exe";
+constexpr std::string_view bSteamMCCexe = "MCC-Win64-Shipping.exe";
 /**
  * @brief The Microsoft Store&trade; executable basename + extension for Halo: The Master Chief
  * Collection&trade;.
  */
 constexpr std::wstring_view MicrosoftStoreMCCexe = L"MCCWinStore-Win64-Shipping.exe";
+constexpr std::string_view bMicrosoftStoreMCCexe = "MCCWinStore-Win64-Shipping.exe";
 /**
  * @brief The relative directory path to the main Halo: The Master Chief Collection&trade;
  * executable within its installation path. That means the absolute path to the executable in the
@@ -128,6 +136,10 @@ std::optional<size_t> LookForMCCProcessID(void);
 std::optional<std::wstring> LookForMCCTempPath(void);
 
 std::optional<std::wstring> GetFileVersion(const std::wstring &path);
+
+std::optional<std::wstring> ConvertBytesToWString(const std::string& bytes);
+std::optional<std::string> ConvertWStringToBytes(const std::wstring& wstr);
+
 std::optional<std::wstring> LookForMCCBuildTag(const std::wstring &install_path);
 std::optional<std::wstring> LookForMCCBuildVersion(const std::wstring &install_path);
 std::optional<std::vector<std::wstring>> LookForInstalledGameDLLs(const std::wstring &install_path);
@@ -137,4 +149,7 @@ std::optional<MCCInstallInfo> LookForInstallInfo(StoreVersion store_version);
 std::optional<MCCInstallInfo> LookForInstallInfo(const std::wstring &install_path);
 std::optional<MCCInstallInfo> LookForSteamInstallInfo(void);
 std::optional<MCCInstallInfo> LookForMicrosoftStoreInstallInfo(void);
+
+bool StartETW(void);
+//bool StartTempWatchdog(void);
 } // namespace mccinfo

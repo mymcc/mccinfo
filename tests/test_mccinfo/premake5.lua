@@ -16,7 +16,9 @@ project "test_mccinfo"
         ".",
         "../%{IncludeDir.mccinfo}",
         "../%{IncludeDir.wil}",
-        "../%{IncludeDir.ValveFileVDF}"
+        "../%{IncludeDir.ValveFileVDF}",
+        "../%{IncludeDir.krabs}",
+        "../%{IncludeDir.tinyfsm}"
     }
 
     links
