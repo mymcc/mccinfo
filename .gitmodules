@@ -4,9 +4,9 @@
 [submodule "external/ValveFileVDF"]
 	path = external/ValveFileVDF
 	url = https://github.com/TinyTinni/ValveFileVDF
-[submodule "external/krabsetw"]
-	path = external/krabsetw
-	url = https://github.com/microsoft/krabsetw/
 [submodule "external/tinyfsm"]
 	path = external/tinyfsm
 	url = https://github.com/digint/tinyfsm
+[submodule "external/krabsetw"]
+	path = external/krabsetw
+	url = https://github.com/Stehfyn/krabsetw
