@@ -19,7 +19,7 @@ project "mccinfo"
         "%{IncludeDir.wil}",
         "%{IncludeDir.ValveFileVDF}",
         "%{IncludeDir.krabs}",
-        "%{IncludeDir.tinyfsm}"
+        "%{IncludeDir.compiletimefsm}"
     }
 
     links

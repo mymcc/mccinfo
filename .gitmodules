@@ -10,3 +10,6 @@
 [submodule "external/krabsetw"]
 	path = external/krabsetw
 	url = https://github.com/Stehfyn/krabsetw
+[submodule "external/compile-time-fsm"]
+	path = external/compile-time-fsm
+	url = https://github.com/cmargiotta/compile-time-fsm

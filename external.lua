@@ -4,7 +4,7 @@ IncludeDir["mccinfo"]  = "../include"
 IncludeDir["wil"] = "../external/wil/include"
 IncludeDir["ValveFileVDF"] = "../external/ValveFileVDF"
 IncludeDir["krabs"] = "../external/krabsetw"
-IncludeDir["tinyfsm"] = "../external/tinyfsm/include"
+IncludeDir["compiletimefsm"] = "../external/compile-time-fsm/single-include"
 LibraryDir = {}
 
 group "external"
