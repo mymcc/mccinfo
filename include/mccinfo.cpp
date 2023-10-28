@@ -494,8 +494,45 @@ krabs::event_filter MakeProcessFilter2(void) {
 }
 #define PRINT_LIMIT 3 // only print a few events for brevity
 void process_rundown_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context);
+void process_rundown_callback2(const EVENT_RECORD& record, const krabs::trace_context& trace_context);
 void file_rundown_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context);
 void hwconfig_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context);
+struct ProcessEntry {
+    std::wstring task_name;
+    std::wstring opcode_name;
+    int event_opcode;
+    std::uint32_t pid;
+    std::string imagefilename;
+};
+inline std::queue<ProcessEntry> s_EventQueue;
+void PrintEvent(ProcessEntry& evt);
+void FlushEventQueue() {
+    while (!s_EventQueue.empty()) {
+        auto& evt = s_EventQueue.front();
+        PrintEvent(evt);
+        s_EventQueue.pop();
+    }
+}
+
+void PrintEvent(ProcessEntry& evt) {
+    if (evt.event_opcode != 11) { // Prevent Process_Terminate (Event Version(2))
+        std::string imagefilename = evt.imagefilename;
+        //ProcessEntry pe({ (uint32_t)schema.event_opcode(), imagefilename });
+        //fsm_handle::dispatch(pe);
+
+        std::wcout << evt.task_name << L"_" << evt.opcode_name;
+        std::wcout << L" (" << evt.event_opcode << L") ";
+        std::uint32_t pid = evt.pid;
+        std::wcout << L" ProcessId=" << pid;
+        auto ppid = GetParentProcessID(pid);
+        if (ppid.has_value()) {
+            std::cout << " ParentProcessId=" << ppid.value();
+        }
+        std::cout << " ImageFileName=" << imagefilename;
+
+        std::wcout << std::endl;
+    }
+}
 
 bool StartETW(void)
 {
@@ -506,13 +543,21 @@ bool StartETW(void)
 
 
 
-    fsm_handle::start();
+    //fsm_handle::start();
     krabs::kernel_trace trace(L"kernel_trace");
-    fsm_kernel_process_provider process_provider;
 
-    fsm_handle::dispatch(SequenceStart(&process_provider));
+    //fsm_kernel_process_provider process_provider;
+    //krabs::kernel::process_provider process_provider2;
+    //fsm_handle::dispatch(SequenceStart(&process_provider));
+    krabs::kernel::process_provider process_provider;
+    //krabs::event_filter filter { krabs::predicates::any_of({ &is_launcher, &is_eac }) };
+    krabs::event_filter filter { krabs::predicates::any_of({ &allf, &is_eac }) };
+    filter.add_on_event_callback(process_rundown_callback2);
+    process_provider.add_filter(filter);
 
     trace.enable(process_provider);
+    
+    //process_provider.add_filter
 
     //krabs::kernel::disk_file_io_provider file_io_provider;
     //file_io_provider.add_on_event_callback(file_rundown_callback);
@@ -531,16 +576,33 @@ bool StartETW(void)
 
     // We will wait for all start events to be processed.
     // By default ETW buffers are flush when full, or every second otherwise
-    Sleep(60000);
+    Sleep(30000);
 
     std::cout << std::endl << " - stopping trace" << std::endl;
+    mccinfo::FlushEventQueue();
+    Sleep(10000);
     trace.stop();
     thread.join();
     return true;
 }
+
+void process_rundown_callback2(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+    krabs::schema schema(record, trace_context.schema_locator);
+    krabs::parser parser(schema);
+
+    if (schema.event_opcode() != 11) { // Prevent Process_Terminate (Event Version(2))
+        std::string imagefilename = parser.parse<std::string>(L"ImageFileName");
+        std::uint32_t pid = parser.parse<std::uint32_t>(L"ProcessId");
+
+        s_EventQueue.emplace(ProcessEntry{ schema.task_name(), schema.opcode_name(), schema.event_opcode(), pid, imagefilename });
+    }
+}
 void process_rundown_callback(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
     krabs::schema schema(record, trace_context.schema_locator);
     krabs::parser parser(schema);
+
+
+
     if (schema.event_opcode() != 11) { // Prevent Process_Terminate (Event Version(2))
         std::string imagefilename = parser.parse<std::string>(L"ImageFileName");
         //ProcessEntry pe({ (uint32_t)schema.event_opcode(), imagefilename });

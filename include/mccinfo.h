@@ -3,6 +3,7 @@
 #include <krabs/krabs.hpp> //#include <windows.h>
 #include <tlhelp32.h>
 
+#include <queue>
 #include <string>
 #include <optional>
 #include <iostream>
@@ -151,5 +152,6 @@ std::optional<MCCInstallInfo> LookForSteamInstallInfo(void);
 std::optional<MCCInstallInfo> LookForMicrosoftStoreInstallInfo(void);
 
 bool StartETW(void);
+void FlushEventQueue();
 //bool StartTempWatchdog(void);
 } // namespace mccinfo

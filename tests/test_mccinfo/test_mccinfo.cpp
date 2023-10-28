@@ -24,9 +24,12 @@ int main(int argc, char** argv) {
 	if (pid.has_value()) {
 		std::wcout << std::left << std::setw(align) << L"MCC PID: " << pid.value() << std::endl;
 	}
+	else {
+		std::wcout << std::left << std::setw(align) << L"MCC PID: " << L"NO PID FOUND" << std::endl;
+	}
 
     mccinfo::StartETW();
-
+	
 	//mccinfo::StartTempWatchdog();
 
 	return 0;
