@@ -1,5 +1,5 @@
 #pragma once
-
+#define NOMINMAX
 #include <krabs/krabs.hpp> //#include <windows.h>
 #include <tlhelp32.h>
 

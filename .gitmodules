@@ -10,3 +10,6 @@
 [submodule "external/compile-time-fsm"]
 	path = external/compile-time-fsm
 	url = https://github.com/cmargiotta/compile-time-fsm
+[submodule "external/lockfree"]
+	path = external/lockfree
+	url = https://github.com/DNedic/lockfree

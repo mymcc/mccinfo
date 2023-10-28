@@ -19,7 +19,8 @@ project "mccinfo"
         "%{IncludeDir.wil}",
         "%{IncludeDir.ValveFileVDF}",
         "%{IncludeDir.krabs}",
-        "%{IncludeDir.compiletimefsm}"
+        "%{IncludeDir.compiletimefsm}",
+        "%{IncludeDir.lockfree}"
     }
 
     links

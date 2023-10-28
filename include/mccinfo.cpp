@@ -1,5 +1,6 @@
 #include "mccinfo.h"
 #include "mccfsm.h"
+#include "lockfree/lockfree.hpp"
 
 namespace mccinfo {
 namespace {
@@ -494,13 +495,12 @@ struct ProcessEntry {
     std::uint32_t pid;
     std::string imagefilename;
 };
-inline std::queue<ProcessEntry> s_EventQueue;
+inline lockfree::mpmc::Queue<ProcessEntry, 10000> s_EventQueue;
 void PrintEvent(ProcessEntry &evt);
 void FlushEventQueue() {
-    while (!s_EventQueue.empty()) {
-        auto &evt = s_EventQueue.front();
-        PrintEvent(evt);
-        s_EventQueue.pop();
+    ProcessEntry pe;
+    while (s_EventQueue.Pop(pe)) {
+        PrintEvent(pe);
     }
 }
 
@@ -605,8 +605,9 @@ void process_rundown_callback2(const EVENT_RECORD &record,
         std::string imagefilename = parser.parse<std::string>(L"ImageFileName");
         std::uint32_t pid = parser.parse<std::uint32_t>(L"ProcessId");
 
-        s_EventQueue.emplace(ProcessEntry{schema.task_name(), schema.opcode_name(),
-                                          schema.event_opcode(), pid, imagefilename});
+        ProcessEntry pe{ schema.task_name(), schema.opcode_name(),
+                                          schema.event_opcode(), pid, imagefilename };
+        s_EventQueue.Push(pe);
     }
 }
 void process_rundown_callback(const EVENT_RECORD &record,
