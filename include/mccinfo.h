@@ -17,14 +17,11 @@
 
 #include <wil/filesystem.h>
 #include <wil/registry.h>
-#include <fsm.hpp>
 
 #pragma warning(push)
 #pragma warning(disable : 4996)
 #include <vdf_parser.hpp>
 #pragma warning(pop)
-
-
 
 namespace mccinfo {
 /**
@@ -71,7 +68,7 @@ const std::unordered_map<StoreVersion, std::wstring_view> StoreVersionToWString{
     {StoreVersion::MicrosoftStore, L"Microsoft Store"}};
 
 struct MCCInstallInfo {
-public:
+  public:
     StoreVersion Kind{StoreVersion::None};
     std::wstring RootPath;
     std::wstring BuildTag;
@@ -80,9 +77,12 @@ public:
     std::vector<std::wstring> InstalledGames;
 
     friend std::wostream &operator<<(std::wostream &os, const MCCInstallInfo &ii);
-    friend std::optional<MCCInstallInfo> LookForInstallInfoImpl(const std::wstring& install_path, StoreVersion store_version);
-private:
-    MCCInstallInfo() {}
+    friend std::optional<MCCInstallInfo> LookForInstallInfoImpl(const std::wstring &install_path,
+                                                                StoreVersion store_version);
+
+  private:
+    MCCInstallInfo() {
+    }
 };
 /**
  * @brief Retrieves the installation path of Steam&trade;.
@@ -138,8 +138,8 @@ std::optional<std::wstring> LookForMCCTempPath(void);
 
 std::optional<std::wstring> GetFileVersion(const std::wstring &path);
 
-std::optional<std::wstring> ConvertBytesToWString(const std::string& bytes);
-std::optional<std::string> ConvertWStringToBytes(const std::wstring& wstr);
+std::optional<std::wstring> ConvertBytesToWString(const std::string &bytes);
+std::optional<std::string> ConvertWStringToBytes(const std::wstring &wstr);
 
 std::optional<std::wstring> LookForMCCBuildTag(const std::wstring &install_path);
 std::optional<std::wstring> LookForMCCBuildVersion(const std::wstring &install_path);
@@ -153,5 +153,5 @@ std::optional<MCCInstallInfo> LookForMicrosoftStoreInstallInfo(void);
 
 bool StartETW(void);
 void FlushEventQueue();
-//bool StartTempWatchdog(void);
+// bool StartTempWatchdog(void);
 } // namespace mccinfo
