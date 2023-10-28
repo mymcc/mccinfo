@@ -17,7 +17,7 @@
 
 #include <wil/filesystem.h>
 #include <wil/registry.h>
-#include <tinyfsm.hpp>
+#include <fsm.hpp>
 
 #pragma warning(push)
 #pragma warning(disable : 4996)
