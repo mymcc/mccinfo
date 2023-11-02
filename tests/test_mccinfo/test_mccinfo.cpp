@@ -5,22 +5,22 @@
 constexpr uint8_t align = 18;
 
 int main(int argc, char** argv) {
-	auto sii = mccinfo::LookForSteamInstallInfo();
+	auto sii = mccinfo::utils::LookForSteamInstallInfo();
 	if (sii.has_value()) {
 		std::wcout << sii.value() << std::endl << std::endl;
 	}
 
-	auto msii = mccinfo::LookForMicrosoftStoreInstallInfo();
+	auto msii = mccinfo::utils::LookForMicrosoftStoreInstallInfo();
 	if (msii.has_value()) {
 		std::wcout << msii.value() << std::endl << std::endl;
 	}
 
-	auto patht = mccinfo::LookForMCCTempPath();
+	auto patht = mccinfo::utils::LookForMCCTempPath();
 	if (patht.has_value()) {
 		std::wcout << std::left << std::setw(align) << L"MCC Temp Path: " << patht.value() << std::endl;
 	}
 
-	auto pid = mccinfo::LookForMCCProcessID();
+	auto pid = mccinfo::utils::LookForMCCProcessID();
 	if (pid.has_value()) {
 		std::wcout << std::left << std::setw(align) << L"MCC PID: " << pid.value() << std::endl;
 	}
@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
 	}
 
     mccinfo::StartETW();
-	
+
 	//mccinfo::StartTempWatchdog();
 
 	return 0;
