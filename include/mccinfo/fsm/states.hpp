@@ -89,7 +89,7 @@ template <typename Derived> struct trace_event_handler {
         }
         if (Derived::seq.is_complete()) {
             std::cout << "should transition" << std::endl;
-            (*fsm)->handle_event(Derived::seq.consume_next_event());
+            fsm->handle_event(Derived::seq.consume_next_event());
         }
     }
 };
@@ -104,13 +104,6 @@ struct mcc_initial : public trace_event_handler<mcc_initial> {
     }
 };
 
-class mcc_fsm {
-  public:
-    template <typename T> static ctfsm::fsm<T> *instance() {
-        static ctfsm::fsm<T> inst;
-        return &inst;
-    }
-};
 struct mcc_off : public trace_event_handler<mcc_off> {
     using transitions = ctfsm::type_map<std::pair<events::reset, mcc_initial>,
                                         std::pair<events::launcher_start, mcc_loading>>;
