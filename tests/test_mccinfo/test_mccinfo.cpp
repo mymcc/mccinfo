@@ -1,26 +1,27 @@
 #include <iostream>
 #include <iomanip>
-#include "mccinfo.h"
+
+#include "mccinfo.hpp"
 
 constexpr uint8_t align = 18;
 
 int main(int argc, char** argv) {
-	auto sii = mccinfo::utils::LookForSteamInstallInfo();
+	auto sii = mccinfo::query::LookForSteamInstallInfo();
 	if (sii.has_value()) {
 		std::wcout << sii.value() << std::endl << std::endl;
 	}
 
-	auto msii = mccinfo::utils::LookForMicrosoftStoreInstallInfo();
+	auto msii = mccinfo::query::LookForMicrosoftStoreInstallInfo();
 	if (msii.has_value()) {
 		std::wcout << msii.value() << std::endl << std::endl;
 	}
 
-	auto patht = mccinfo::utils::LookForMCCTempPath();
+	auto patht = mccinfo::query::LookForMCCTempPath();
 	if (patht.has_value()) {
 		std::wcout << std::left << std::setw(align) << L"MCC Temp Path: " << patht.value() << std::endl;
 	}
 
-	auto pid = mccinfo::utils::LookForMCCProcessID();
+	auto pid = mccinfo::query::LookForMCCProcessID();
 	if (pid.has_value()) {
 		std::wcout << std::left << std::setw(align) << L"MCC PID: " << pid.value() << std::endl;
 	}
@@ -28,9 +29,7 @@ int main(int argc, char** argv) {
 		std::wcout << std::left << std::setw(align) << L"MCC PID: " << L"NO PID FOUND" << std::endl;
 	}
 
-    mccinfo::StartETW();
-
-	//mccinfo::StartTempWatchdog();
+    mccinfo::fsm2::provider::StartETW();
 
 	return 0;
 }
