@@ -16,6 +16,6 @@ struct no_eac {};
 struct launch_reset {};
 
 struct process_event {};
-}
-}
-}
+} // namespace events
+} // namespace fsm2
+} // namespace mccinfo

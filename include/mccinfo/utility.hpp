@@ -14,7 +14,7 @@
 
 namespace mccinfo {
 namespace utility {
-std::optional<std::wstring> ConvertBytesToWString(const std::string& bytes) {
+std::optional<std::wstring> ConvertBytesToWString(const std::string &bytes) {
     int required_size =
         MultiByteToWideChar(CP_UTF8, 0, bytes.data(), static_cast<int>(bytes.size()), nullptr, 0);
     if (required_size == 0)
@@ -22,29 +22,27 @@ std::optional<std::wstring> ConvertBytesToWString(const std::string& bytes) {
 
     std::wstring result(static_cast<size_t>(required_size), L'\0');
     int converted = MultiByteToWideChar(CP_UTF8, 0, bytes.data(), static_cast<int>(bytes.size()),
-        &result[0], required_size);
+                                        &result[0], required_size);
     if (converted == 0)
         return std::nullopt;
 
     return result;
 }
 
-
-std::optional<std::string> ConvertWStringToBytes(const std::wstring& wstr) {
+std::optional<std::string> ConvertWStringToBytes(const std::wstring &wstr) {
     int required_size = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), static_cast<int>(wstr.size()),
-        nullptr, 0, nullptr, nullptr);
+                                            nullptr, 0, nullptr, nullptr);
     if (required_size == 0)
         return std::nullopt;
 
     std::string result(static_cast<size_t>(required_size), '\0');
     int converted = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), static_cast<int>(wstr.size()),
-        &result[0], required_size, nullptr, nullptr);
+                                        &result[0], required_size, nullptr, nullptr);
     if (converted == 0)
         return std::nullopt;
 
     return result;
 }
-
 
 std::optional<std::vector<char>> SlurpFile(const std::filesystem::path path) {
     std::ifstream file(path, std::ios::binary | std::ios::ate);
@@ -58,8 +56,7 @@ std::optional<std::vector<char>> SlurpFile(const std::filesystem::path path) {
         return std::nullopt;
 }
 
-
-std::optional<std::filesystem::path> ExpandPath(const std::filesystem::path& path) {
+std::optional<std::filesystem::path> ExpandPath(const std::filesystem::path &path) {
     std::wstring dst;
     dst.resize(MAX_PATH);
     DWORD ret = ::ExpandEnvironmentStringsW(path.wstring().c_str(), dst.data(), MAX_PATH);
@@ -70,8 +67,7 @@ std::optional<std::filesystem::path> ExpandPath(const std::filesystem::path& pat
     return std::filesystem::absolute(dst);
 }
 
-
-std::optional<size_t> GetProcessIDFromName(const std::wstring& process_name) {
+std::optional<size_t> GetProcessIDFromName(const std::wstring &process_name) {
     HANDLE hSnapshot;
     PROCESSENTRY32 pe;
     size_t pid = 0;
@@ -95,7 +91,6 @@ std::optional<size_t> GetProcessIDFromName(const std::wstring& process_name) {
     CloseHandle(hSnapshot);
     return std::nullopt;
 }
-
 
 std::optional<size_t> GetParentProcessID(size_t pid) {
     HANDLE hSnapshot;
@@ -121,7 +116,6 @@ std::optional<size_t> GetParentProcessID(size_t pid) {
     CloseHandle(hSnapshot);
     return std::nullopt;
 }
-
 
 bool IsThreadInProcess(DWORD threadID, DWORD processID) {
     // Take a snapshot of all running threads
@@ -152,5 +146,5 @@ bool IsThreadInProcess(DWORD threadID, DWORD processID) {
     CloseHandle(hThreadSnap);
     return false;
 }
-}
-}
+} // namespace utility
+} // namespace mccinfo

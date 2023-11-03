@@ -28,37 +28,36 @@ namespace query {
 enum class StoreVersion { None, Steam, MicrosoftStore };
 
 const std::unordered_map<StoreVersion, std::wstring_view> StoreVersionToWString{
-{StoreVersion::None, L"None"},
-{StoreVersion::Steam, L"Steam" },
-{StoreVersion::MicrosoftStore, L"Microsoft Store" }};
-
+    {StoreVersion::None, L"None"},
+    {StoreVersion::Steam, L"Steam"},
+    {StoreVersion::MicrosoftStore, L"Microsoft Store"}};
 
 struct MCCInstallInfo {
-public:
-    StoreVersion Kind{ StoreVersion::None };
+  public:
+    StoreVersion Kind{StoreVersion::None};
     std::wstring RootPath;
     std::wstring BuildTag;
     std::wstring BuildVersion;
 
     std::vector<std::wstring> InstalledGames;
 
-    friend std::wostream& operator<<(std::wostream& os, const MCCInstallInfo& ii);
-    friend std::optional<MCCInstallInfo> LookForInstallInfoImpl(const std::wstring& install_path,
-        StoreVersion store_version);
+    friend std::wostream &operator<<(std::wostream &os, const MCCInstallInfo &ii);
+    friend std::optional<MCCInstallInfo> LookForInstallInfoImpl(const std::wstring &install_path,
+                                                                StoreVersion store_version);
 
-private:
-    MCCInstallInfo() {}
+  private:
+    MCCInstallInfo() {
+    }
 };
 
-
-std::wostream& operator<<(std::wostream& os, const MCCInstallInfo& ii) {
+std::wostream &operator<<(std::wostream &os, const MCCInstallInfo &ii) {
     constexpr uint8_t align = 18;
 
     os << L"MCC Installation Info:" << std::endl
-        << std::left << std::setw(align) << L"Kind: " << StoreVersionToWString.at(ii.Kind) << L" ("
-        << ii.BuildVersion << L") " << ii.BuildTag << std::endl
-        << std::left << std::setw(align) << L"RootPath: " << ii.RootPath << std::endl
-        << std::left << std::setw(align) << L"Installed Games: ";
+       << std::left << std::setw(align) << L"Kind: " << StoreVersionToWString.at(ii.Kind) << L" ("
+       << ii.BuildVersion << L") " << ii.BuildTag << std::endl
+       << std::left << std::setw(align) << L"RootPath: " << ii.RootPath << std::endl
+       << std::left << std::setw(align) << L"Installed Games: ";
     for (size_t i = 0; i < ii.InstalledGames.size(); ++i) {
         os << ii.InstalledGames[i];
         if (i != ii.InstalledGames.size() - 1) {
@@ -68,11 +67,11 @@ std::wostream& operator<<(std::wostream& os, const MCCInstallInfo& ii) {
     return os;
 }
 
-std::optional<StoreVersion> LookForMCCKind(const std::wstring& install_path) {
+std::optional<StoreVersion> LookForMCCKind(const std::wstring &install_path) {
     std::filesystem::path path(install_path);
-    std::array<std::wstring_view, 2> exes = { SteamMCCexe, MicrosoftStoreMCCexe };
+    std::array<std::wstring_view, 2> exes = {SteamMCCexe, MicrosoftStoreMCCexe};
 
-    for (const auto& exe : exes) {
+    for (const auto &exe : exes) {
         auto exe_path = (path / MCCexeRelativePath / exe).make_preferred();
         if (std::filesystem::exists(exe_path)) {
             if (exe == SteamMCCexe)
@@ -84,13 +83,12 @@ std::optional<StoreVersion> LookForMCCKind(const std::wstring& install_path) {
     return std::nullopt;
 }
 
-
 std::optional<std::vector<std::wstring>> LookForInstalledGameDLLs(
-    const std::wstring& install_path) {
+    const std::wstring &install_path) {
     std::filesystem::path path(install_path);
     if (std::filesystem::exists(install_path)) {
         std::vector<std::wstring> InstalledGameDLLs;
-        for (const auto& game : GameBasenames) {
+        for (const auto &game : GameBasenames) {
             auto dll_path = path / game / (std::wstring(game) + L".dll");
             if (std::filesystem::exists(dll_path)) {
                 InstalledGameDLLs.push_back(dll_path.generic_wstring());
@@ -102,20 +100,19 @@ std::optional<std::vector<std::wstring>> LookForInstalledGameDLLs(
     return std::nullopt;
 }
 
-
-std::optional<std::wstring> GetFileVersion(const std::wstring& path) {
+std::optional<std::wstring> GetFileVersion(const std::wstring &path) {
     std::filesystem::path file_path(path);
 
     if (std::filesystem::exists(file_path)) {
         DWORD info_size = GetFileVersionInfoSizeW(file_path.generic_wstring().c_str(), NULL);
         std::vector<wchar_t> file_info(info_size);
         BOOL ret = GetFileVersionInfoW(file_path.generic_wstring().c_str(), NULL, info_size,
-            file_info.data());
+                                       file_info.data());
 
         if (ret != 0) {
             UINT size = 0;
-            VS_FIXEDFILEINFO* pFileInfo;
-            ret = VerQueryValueW((void*)file_info.data(), L"\\", (LPVOID*)&pFileInfo, &size);
+            VS_FIXEDFILEINFO *pFileInfo;
+            ret = VerQueryValueW((void *)file_info.data(), L"\\", (LPVOID *)&pFileInfo, &size);
 
             if (ret != 0) {
                 std::wstringstream wss;
@@ -132,23 +129,21 @@ std::optional<std::wstring> GetFileVersion(const std::wstring& path) {
     return std::nullopt;
 }
 
-
-std::optional<std::wstring> LookForMCCBuildVersion(const std::wstring& install_path) {
+std::optional<std::wstring> LookForMCCBuildVersion(const std::wstring &install_path) {
     std::filesystem::path path(install_path);
-    std::array<std::wstring_view, 2> exes = { SteamMCCexe, MicrosoftStoreMCCexe };
+    std::array<std::wstring_view, 2> exes = {SteamMCCexe, MicrosoftStoreMCCexe};
 
-    for (const auto& exe : exes) {
+    for (const auto &exe : exes) {
         auto exe_path = (path / MCCexeRelativePath / exe).make_preferred();
         if (std::filesystem::exists(exe_path)) {
             auto fv = GetFileVersion(path.generic_wstring());
             if (fv.has_value()) {
                 return fv;
-            }
-            else {
+            } else {
                 // search through available game .dlls for version (Likely for MS Store)
                 auto game_dlls = LookForInstalledGameDLLs(path);
                 if (game_dlls.has_value()) {
-                    for (const auto& dll : game_dlls.value()) {
+                    for (const auto &dll : game_dlls.value()) {
                         auto fv_dll = GetFileVersion(dll);
                         if (fv_dll.has_value()) {
                             return fv_dll;
@@ -161,8 +156,7 @@ std::optional<std::wstring> LookForMCCBuildVersion(const std::wstring& install_p
     return std::nullopt;
 }
 
-
-std::optional<std::wstring> LookForMCCBuildTag(const std::wstring& install_path) {
+std::optional<std::wstring> LookForMCCBuildTag(const std::wstring &install_path) {
     std::filesystem::path path(install_path);
     if (std::filesystem::exists(install_path)) {
         auto build_tag_file = path / "build_tag.txt";
@@ -185,9 +179,8 @@ std::optional<std::wstring> LookForMCCBuildTag(const std::wstring& install_path)
     return std::nullopt;
 }
 
-
 std::optional<MCCInstallInfo> LookForInstallInfoImpl(
-    const std::wstring& install_path, StoreVersion store_version = StoreVersion::None) {
+    const std::wstring &install_path, StoreVersion store_version = StoreVersion::None) {
     MCCInstallInfo ii;
 
     if (std::filesystem::exists(install_path)) {
@@ -209,7 +202,7 @@ std::optional<MCCInstallInfo> LookForInstallInfoImpl(
 
                 auto installed = LookForInstalledGameDLLs(install_path);
                 if (installed.has_value()) {
-                    for (const auto& game : installed.value()) {
+                    for (const auto &game : installed.value()) {
                         ii.InstalledGames.push_back(std::filesystem::path(game).stem());
                     }
                 }
@@ -220,14 +213,14 @@ std::optional<MCCInstallInfo> LookForInstallInfoImpl(
     return std::nullopt;
 }
 
-std::optional<std::wstring> LookForMCCInVDF(const std::wstring& vdf) {
+std::optional<std::wstring> LookForMCCInVDF(const std::wstring &vdf) {
     try {
         std::ifstream file(vdf);
         auto root = tyti::vdf::read(file);
-        for (const auto& libFolder : root.childs) {
+        for (const auto &libFolder : root.childs) {
             std::filesystem::path folder = libFolder.second->attribs["path"];
-            for (const auto& app : libFolder.second->childs) {
-                for (const auto& appid : app.second->attribs) {
+            for (const auto &app : libFolder.second->childs) {
+                for (const auto &appid : app.second->attribs) {
                     if (appid.first.compare(std::to_string(MCCSteamAppID)) == 0) {
                         return (folder / "steamapps\\common\\Halo The Master Chief Collection")
                             .make_preferred();
@@ -235,18 +228,15 @@ std::optional<std::wstring> LookForMCCInVDF(const std::wstring& vdf) {
                 }
             }
         }
-    }
-    catch (const std::ios_base::failure& e) {
+    } catch (const std::ios_base::failure &e) {
         std::cerr << "File operation failed: " << e.what() << std::endl;
-    }
-    catch (...) {
+    } catch (...) {
         std::cerr << "An unknown error occurred." << std::endl;
     }
     return std::nullopt;
 }
 
-
-std::optional<std::wstring> LookForMCCInSteamApps(const std::wstring& steam_install) {
+std::optional<std::wstring> LookForMCCInSteamApps(const std::wstring &steam_install) {
     std::filesystem::path steamapps = steam_install + L"\\steamapps";
     if (std::filesystem::is_directory(steamapps)) {
         std::filesystem::path vdf = steamapps.generic_wstring() + L"\\libraryfolders.vdf";
@@ -257,24 +247,22 @@ std::optional<std::wstring> LookForMCCInSteamApps(const std::wstring& steam_inst
     return std::nullopt;
 }
 
-
-std::optional<std::wstring> LookForMCCInMuiCache(const wil::unique_hkey& hKeyGuard,
-    const std::wstring& substr, uint32_t value_count) {
+std::optional<std::wstring> LookForMCCInMuiCache(const wil::unique_hkey &hKeyGuard,
+                                                 const std::wstring &substr, uint32_t value_count) {
     wchar_t valueName[MAX_PATH];
     DWORD valueNameSize;
 
     for (DWORD i = 0; i < value_count; ++i) {
         valueNameSize = MAX_PATH;
         LONG result = RegEnumValueW(hKeyGuard.get(), i, valueName, &valueNameSize, nullptr, nullptr,
-            nullptr, nullptr);
+                                    nullptr, nullptr);
         if (result == ERROR_SUCCESS) {
             std::wstring w(valueName, MAX_PATH);
             size_t pos = w.find(substr.c_str());
             if (pos != std::wstring::npos) {
                 return w.substr(0, pos) + L"content";
             }
-        }
-        else {
+        } else {
             std::cerr << "Failed to enumerate registry value. Error code: " << result << std::endl;
             break;
         }
@@ -282,58 +270,56 @@ std::optional<std::wstring> LookForMCCInMuiCache(const wil::unique_hkey& hKeyGua
     return std::nullopt;
 }
 /**
-* @brief Retrieves the installation path of Steam&trade;.
-*
-* Attempts to locate the Steam&trade; installation directory, which is typically found at
-* <b>C:\\Program Files (x86)\\Steam</b>. If the installation path cannot be determined,
-* the returned optional will be empty.
-*
-* @return An optional containing the installation path of Steam&trade; if found; otherwise, an
-* empty optional.
-*/
+ * @brief Retrieves the installation path of Steam&trade;.
+ *
+ * Attempts to locate the Steam&trade; installation directory, which is typically found at
+ * <b>C:\\Program Files (x86)\\Steam</b>. If the installation path cannot be determined,
+ * the returned optional will be empty.
+ *
+ * @return An optional containing the installation path of Steam&trade; if found; otherwise, an
+ * empty optional.
+ */
 std::optional<std::wstring> LookForSteamInstallPath(void) {
     try {
         wil::unique_hkey hKeyGuard =
             wil::reg::open_unique_key(HKEY_LOCAL_MACHINE, L"SOFTWARE\\Wow6432Node\\Valve\\Steam");
         return wil::reg::try_get_value_string(hKeyGuard.get(), L"InstallPath");
-    }
-    catch (const wil::ResultException&) {
+    } catch (const wil::ResultException &) {
         return std::nullopt;
     }
 }
 /**
-* @brief Retrieves the installation path of the Steam&trade; version of Halo: The Master Chief
-* Collection&trade;.
-*
-* Attempts to locate the installation directory of the Steam&trade; version of Halo: The Master
-* Chief Collection&trade;, which is typically found at <b>C:\\Program Files
-* (x86)\\Steam\\steamapps\\common\\Halo The Master Chief Collection\\</b>. If the installation path
-* cannot be determined, the returned optional will be empty.
-*
-* @return An optional containing the installation path of Steam&trade; if found; otherwise, an
-* empty optional.
-*/
+ * @brief Retrieves the installation path of the Steam&trade; version of Halo: The Master Chief
+ * Collection&trade;.
+ *
+ * Attempts to locate the installation directory of the Steam&trade; version of Halo: The Master
+ * Chief Collection&trade;, which is typically found at <b>C:\\Program Files
+ * (x86)\\Steam\\steamapps\\common\\Halo The Master Chief Collection\\</b>. If the installation path
+ * cannot be determined, the returned optional will be empty.
+ *
+ * @return An optional containing the installation path of Steam&trade; if found; otherwise, an
+ * empty optional.
+ */
 std::optional<std::wstring> LookForMCCSteamInstallPath(void) {
     auto path = LookForSteamInstallPath();
     if (path.has_value()) {
         return LookForMCCInSteamApps(path.value());
-    }
-    else {
+    } else {
         return std::nullopt;
     }
 }
 /**
-* @brief Retrieves the installation path of the Microsoft Store&trade; version of Halo: The Master
-* Chief Collection&trade;.
-*
-* Attempts to locate the installation directory of the Microsoft Store&trade; version of Halo: The
-* Master Chief Collection&trade;, which is typically found at <b>C:\\XboxGames\\Halo The Master
-* Chief Collection\\content\\</b>. If the installation path cannot be determined, the returned
-* optional will be empty.
-*
-* @return An optional containing the installation path of Microsoft Store&trade; if found;
-* otherwise, an empty optional.
-*/
+ * @brief Retrieves the installation path of the Microsoft Store&trade; version of Halo: The Master
+ * Chief Collection&trade;.
+ *
+ * Attempts to locate the installation directory of the Microsoft Store&trade; version of Halo: The
+ * Master Chief Collection&trade;, which is typically found at <b>C:\\XboxGames\\Halo The Master
+ * Chief Collection\\content\\</b>. If the installation path cannot be determined, the returned
+ * optional will be empty.
+ *
+ * @return An optional containing the installation path of Microsoft Store&trade; if found;
+ * otherwise, an empty optional.
+ */
 std::optional<std::wstring> LookForMCCMicrosoftStoreInstallPath(void) {
     try {
         wil::unique_hkey hKeyGuard = wil::reg::open_unique_key(
@@ -345,25 +331,24 @@ std::optional<std::wstring> LookForMCCMicrosoftStoreInstallPath(void) {
         return LookForMCCInMuiCache(
             hKeyGuard, L"content\\mcc\\binaries\\win64\\mccwinstore-win64-shipping.exe",
             value_count);
-    }
-    catch (const wil::ResultException& e) {
+    } catch (const wil::ResultException &e) {
         std::cerr << "A Windows Implementation Library Exception occurred: " << e.what()
-            << std::endl;
+                  << std::endl;
         return std::nullopt;
     }
 }
 /**
-* @brief Retrieves the process id of the first found instance of Halo: The Master
-* Chief Collection&trade;.
-*
-* Attempts to find the process id of a running instance Halo: The Master Chief Collection&trade;,
-* with no distinction on whether or not the instance is hosting an Easy Anti-Cheat client. As far
-* as instance version precedence, this function first checks for Microsoft Store instances, then
-* checks for Steam instances. If no instances are found, then the optional will be empty.
-*
-* @return An optional containing the process id of the first found instance of Halo: The Master
-* Chief Collection&trade; if one is found; otherwise, an empty optional.
-*/
+ * @brief Retrieves the process id of the first found instance of Halo: The Master
+ * Chief Collection&trade;.
+ *
+ * Attempts to find the process id of a running instance Halo: The Master Chief Collection&trade;,
+ * with no distinction on whether or not the instance is hosting an Easy Anti-Cheat client. As far
+ * as instance version precedence, this function first checks for Microsoft Store instances, then
+ * checks for Steam instances. If no instances are found, then the optional will be empty.
+ *
+ * @return An optional containing the process id of the first found instance of Halo: The Master
+ * Chief Collection&trade; if one is found; otherwise, an empty optional.
+ */
 std::optional<size_t> LookForMCCProcessID(void) {
     auto windows_pid = utility::GetProcessIDFromName(std::wstring(MicrosoftStoreMCCexe));
     if (windows_pid.has_value()) {
@@ -376,23 +361,18 @@ std::optional<size_t> LookForMCCProcessID(void) {
     return std::nullopt;
 }
 
-
 std::optional<std::wstring> LookForMCCTempPath(void) {
     auto temp_root = utility::ExpandPath(MCCTempPath);
     if (temp_root.has_value()) {
         return temp_root.value();
-    }
-    else {
+    } else {
         return std::nullopt;
     }
 }
 
-
-
-std::optional<MCCInstallInfo> LookForInstallInfo(const std::wstring& install_path) {
+std::optional<MCCInstallInfo> LookForInstallInfo(const std::wstring &install_path) {
     return LookForInstallInfoImpl(install_path);
 }
-
 
 std::optional<MCCInstallInfo> LookForInstallInfo(StoreVersion store_version) {
     std::optional<std::filesystem::path> install_path;
@@ -409,14 +389,12 @@ std::optional<MCCInstallInfo> LookForInstallInfo(StoreVersion store_version) {
         return std::nullopt;
 }
 
-
 std::optional<MCCInstallInfo> LookForSteamInstallInfo(void) {
     return LookForInstallInfo(StoreVersion::Steam);
 }
 
-
 std::optional<MCCInstallInfo> LookForMicrosoftStoreInstallInfo(void) {
     return LookForInstallInfo(StoreVersion::MicrosoftStore);
 }
-}
-}
+} // namespace query
+} // namespace mccinfo

@@ -5,9 +5,10 @@
 
 namespace mccinfo {
 class atomic_mutex {
-public:
+  public:
     void lock() {
-        while (flag.exchange(true, std::memory_order_relaxed));
+        while (flag.exchange(true, std::memory_order_relaxed))
+            ;
         std::atomic_thread_fence(std::memory_order_acquire);
     }
 
@@ -16,17 +17,21 @@ public:
         flag.store(false, std::memory_order_relaxed);
     }
 
-private:
-    std::atomic<bool> flag{ false };
+  private:
+    std::atomic<bool> flag{false};
 };
 
 class atomic_guard {
-public:
-    atomic_guard(atomic_mutex& mutex) : m_Mutex(mutex) { m_Mutex.lock(); }
-    ~atomic_guard() { m_Mutex.unlock(); }
+  public:
+    atomic_guard(atomic_mutex &mutex) : m_Mutex(mutex) {
+        m_Mutex.lock();
+    }
+    ~atomic_guard() {
+        m_Mutex.unlock();
+    }
 
-private:
-    atomic_mutex& m_Mutex;
+  private:
+    atomic_mutex &m_Mutex;
 };
 namespace fsm2 {
 namespace states {
@@ -46,34 +51,31 @@ struct launch_initial {
 };
 
 struct launch_start {
-    using transitions = ctfsm::type_map<
-        std::pair<events::launch_reset, launch_initial>,
-        std::pair<events::eac, launch_with_eac>,
-        std::pair<events::no_eac, launch_no_eac>>;
+    using transitions = ctfsm::type_map<std::pair<events::launch_reset, launch_initial>,
+                                        std::pair<events::eac, launch_with_eac>,
+                                        std::pair<events::no_eac, launch_no_eac>>;
 
     static constexpr std::string_view id{"LAUNCH START"};
 };
 
 struct launch_with_eac {
-    using transitions = ctfsm::type_map<
-        std::pair<events::launch_reset, launch_initial>>;
+    using transitions = ctfsm::type_map<std::pair<events::launch_reset, launch_initial>>;
 
     static constexpr std::string_view id{"LAUNCH WITH EAC"};
 };
 
 struct launch_no_eac {
-    using transitions = ctfsm::type_map<
-        std::pair<events::launch_reset, launch_initial>>;
+    using transitions = ctfsm::type_map<std::pair<events::launch_reset, launch_initial>>;
 
     static constexpr std::string_view id{"LAUNCH WITH NO EAC"};
 };
 
 static atomic_mutex s_Lock;
 
-template <typename Derived>
-struct trace_event_handler {
+template <typename Derived> struct trace_event_handler {
     template <typename fsm_type>
-    void handle_trace_event(fsm_type* fsm, const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+    void handle_trace_event(fsm_type *fsm, const EVENT_RECORD &record,
+                            const krabs::trace_context &trace_context) {
         atomic_guard lk(s_Lock);
 
         if (Derived::seq.try_advance(record, trace_context)) {
@@ -82,7 +84,7 @@ struct trace_event_handler {
             krabs::parser parser(schema);
 
             if (schema.event_opcode() != 11) { // Prevent Process_Terminate (Event Version(2))
-                //perhaps log
+                // perhaps log
             }
         }
         if (Derived::seq.is_complete()) {
@@ -95,67 +97,62 @@ struct trace_event_handler {
 struct mcc_initial : public trace_event_handler<mcc_initial> {
     using transitions = ctfsm::type_map<std::pair<events::start, mcc_off>>;
     static constexpr std::string_view id{"INITIAL"};
-    static constexpr predicate_sequence<events::start, 0> seq{}; //meant to be unused
+    static constexpr predicate_sequence<events::start, 0> seq{}; // meant to be unused
 
-    void on_enter()
-    {
+    void on_enter() {
         std::cout << "INITIAL entered" << std::endl;
     }
 };
 
 class mcc_fsm {
-public:
-    template<typename T>
-    static ctfsm::fsm<T>* instance() {
+  public:
+    template <typename T> static ctfsm::fsm<T> *instance() {
         static ctfsm::fsm<T> inst;
         return &inst;
     }
 };
 struct mcc_off : public trace_event_handler<mcc_off> {
-    using transitions = ctfsm::type_map<
-        std::pair<events::reset, mcc_initial>,
-        std::pair<events::launcher_start, mcc_loading>>;
+    using transitions = ctfsm::type_map<std::pair<events::reset, mcc_initial>,
+                                        std::pair<events::launcher_start, mcc_loading>>;
 
     static constexpr std::string_view id{"MCC:OFF"};
 
-    static constexpr predicate_sequence<events::launcher_start, 2> seq{ &predicates::launcher_start_pred, & predicates::eac_start_pred};
+    static constexpr predicate_sequence<events::launcher_start, 2> seq{
+        &predicates::launcher_start_pred, &predicates::eac_start_pred};
 
-    void on_enter()
-    {
+    void on_enter() {
         std::cout << "mcc_off entered" << std::endl;
     }
 };
 
 struct mcc_loading : public trace_event_handler<mcc_loading> {
-    using transitions = ctfsm::type_map<
-        std::pair<events::reset, mcc_initial>,
-        std::pair<events::launcher_failed, mcc_off>,
-        std::pair<events::launcher_end, mcc_on>>;
+    using transitions = ctfsm::type_map<std::pair<events::reset, mcc_initial>,
+                                        std::pair<events::launcher_failed, mcc_off>,
+                                        std::pair<events::launcher_end, mcc_on>>;
 
     static constexpr std::string_view id{"MCC:LOADING"};
-    //static constinit ctfsm::fsm<fsm::states::launch_initial> fsm;
+    // static constinit ctfsm::fsm<fsm::states::launch_initial> fsm;
 
-    static constexpr auto seq = make_predicate_sequence<events::launcher_end>(&predicates::launcher_end_pred);
+    static constexpr auto seq =
+        make_predicate_sequence<events::launcher_end>(&predicates::launcher_end_pred);
 
-    void on_enter()
-    {
+    void on_enter() {
         std::cout << "mcc_loading entered" << std::endl;
     }
 };
 struct mcc_on : public trace_event_handler<mcc_on> {
-    using transitions = ctfsm::type_map<
-        std::pair<events::reset, mcc_initial>,
-        std::pair<events::process_lost, mcc_off>>;
+    using transitions = ctfsm::type_map<std::pair<events::reset, mcc_initial>,
+                                        std::pair<events::process_lost, mcc_off>>;
 
     static constexpr std::string_view id{"MCC:ON"};
-    static constexpr predicate_sequence<events::process_lost, 1> seq{ &predicates::mcc_process_lossed };
+    static constexpr predicate_sequence<events::process_lost, 1> seq{
+        &predicates::mcc_process_lossed};
 
-    void on_enter()
-    {
+    void on_enter() {
         std::cout << "mcc_on entered" << std::endl;
     }
 };
 
-}
-}
-}
+} // namespace states
+} // namespace fsm2
+} // namespace mccinfo

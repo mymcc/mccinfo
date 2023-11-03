@@ -13,14 +13,19 @@ if not exist %clang_format% (
     exit /b 1
 )
 
-set format_dirs="tests\" "include\"
+set "td=tests"
+set "sd=include"
 
-:: Loop through subdirectories and run clang-format on each .cpp and .h file
-for %%d in (%format_dirs%) do (
-    echo Formatting files in %%d
-    for %%f in (%%d\*.cpp, %%d\*.h) do (
-        %clang_format% -i %%f
-    )
+echo Formatting files in %td% and subdirectories
+for /r %td% %%f in (*.cpp *.hpp) do (
+    echo %%f
+    "%clang_format%" -i "%%f"
+)
+
+echo Formatting files in %sd% and subdirectories
+for /r %sd% %%f in (*.cpp *.hpp) do (
+    echo Formatting ... %%f
+    "%clang_format%" -i "%%f"
 )
 
 echo Done formatting!
