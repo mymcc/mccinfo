@@ -6,6 +6,7 @@ IncludeDir["ValveFileVDF"] = "../external/ValveFileVDF"
 IncludeDir["krabs"] = "../external/krabsetw"
 IncludeDir["compiletimefsm"] = "../external/compile-time-fsm/src"
 IncludeDir["lockfree"] = "../external/lockfree"
+IncludeDir["sml"] = "../external/sml/include"
 LibraryDir = {}
 
 group "external"

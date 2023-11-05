@@ -13,3 +13,6 @@
 [submodule "external/lockfree"]
 	path = external/lockfree
 	url = https://github.com/DNedic/lockfree
+[submodule "external/sml"]
+	path = external/sml
+	url = https://github.com/boost-ext/sml

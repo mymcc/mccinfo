@@ -6,3 +6,4 @@
 #include "mccinfo/constants.hpp"
 #include "mccinfo/query.hpp"
 #include "mccinfo/fsm/provider.hpp"
+#include "mccinfo/fsm/fsm2.hpp"

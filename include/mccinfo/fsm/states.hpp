@@ -1,38 +1,10 @@
 #pragma once
 
 #include <fsm/fsm.hpp>
+#include "..\utility.hpp"
 #include "static_predicates.hpp"
 
 namespace mccinfo {
-class atomic_mutex {
-  public:
-    void lock() {
-        while (flag.exchange(true, std::memory_order_relaxed))
-            ;
-        std::atomic_thread_fence(std::memory_order_acquire);
-    }
-
-    void unlock() {
-        std::atomic_thread_fence(std::memory_order_release);
-        flag.store(false, std::memory_order_relaxed);
-    }
-
-  private:
-    std::atomic<bool> flag{false};
-};
-
-class atomic_guard {
-  public:
-    atomic_guard(atomic_mutex &mutex) : m_Mutex(mutex) {
-        m_Mutex.lock();
-    }
-    ~atomic_guard() {
-        m_Mutex.unlock();
-    }
-
-  private:
-    atomic_mutex &m_Mutex;
-};
 namespace fsm2 {
 namespace states {
 struct mcc_initial;
@@ -70,13 +42,13 @@ struct launch_no_eac {
     static constexpr std::string_view id{"LAUNCH WITH NO EAC"};
 };
 
-static atomic_mutex s_Lock;
+static utility::atomic_mutex s_Lock;
 
 template <typename Derived> struct trace_event_handler {
     template <typename fsm_type>
     void handle_trace_event(fsm_type *fsm, const EVENT_RECORD &record,
                             const krabs::trace_context &trace_context) {
-        atomic_guard lk(s_Lock);
+        utility::atomic_guard lk(s_Lock);
 
         if (Derived::seq.try_advance(record, trace_context)) {
             std::cout << "handling trace event" << std::endl;

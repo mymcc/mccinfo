@@ -1,7 +1,7 @@
 #pragma once
 
 #include "..\query.hpp"
-
+#include "fsm2.hpp"
 #include "static_predicates.hpp"
 #include "predicate_sequence.hpp"
 #include "events.hpp"
@@ -15,6 +15,12 @@ namespace fsm2 {
 namespace provider {
 
 bool StartETW(void) {
+    using namespace boost::sml;
+    sm<fsm::mcc> sm;
+    assert(sm.is(state<fsm::off>) == true);
+    sm.process_event(fsm::launcher_start{});
+    assert(sm.is(state<fsm::launching>) == true);
+
 
     ctfsm::fsm<fsm2::states::mcc_initial> fsm;
     fsm.handle_event<fsm2::events::start>();

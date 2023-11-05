@@ -20,7 +20,8 @@ project "mccinfo"
         "%{IncludeDir.ValveFileVDF}",
         "%{IncludeDir.krabs}",
         "%{IncludeDir.compiletimefsm}",
-        "%{IncludeDir.lockfree}"
+        "%{IncludeDir.lockfree}",
+        "%{IncludeDir.sml}"
     }
 
     links

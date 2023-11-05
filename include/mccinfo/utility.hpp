@@ -14,6 +14,36 @@
 
 namespace mccinfo {
 namespace utility {
+class atomic_mutex {
+  public:
+    void lock() {
+        while (flag.exchange(true, std::memory_order_relaxed))
+            ;
+        std::atomic_thread_fence(std::memory_order_acquire);
+    }
+
+    void unlock() {
+        std::atomic_thread_fence(std::memory_order_release);
+        flag.store(false, std::memory_order_relaxed);
+    }
+
+  private:
+    std::atomic<bool> flag{false};
+};
+
+class atomic_guard {
+  public:
+    atomic_guard(atomic_mutex &mutex) : m_Mutex(mutex) {
+        m_Mutex.lock();
+    }
+    ~atomic_guard() {
+        m_Mutex.unlock();
+    }
+
+  private:
+    atomic_mutex &m_Mutex;
+};
+
 std::optional<std::wstring> ConvertBytesToWString(const std::string &bytes) {
     int required_size =
         MultiByteToWideChar(CP_UTF8, 0, bytes.data(), static_cast<int>(bytes.size()), nullptr, 0);
