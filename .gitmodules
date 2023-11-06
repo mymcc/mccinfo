@@ -18,4 +18,4 @@
 	url = https://github.com/boost-ext/sml
 [submodule "external/cometa"]
 	path = external/cometa
-	url = https://github.com/kfrlib/cometa/
+	url = https://github.com/mymcc/cometa
