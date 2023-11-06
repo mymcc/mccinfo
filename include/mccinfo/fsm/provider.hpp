@@ -1,11 +1,12 @@
 #pragma once
 
 #include "..\query.hpp"
-#include "fsm2.hpp"
+#include "mccfsm.hpp"
 #include "static_predicates.hpp"
 #include "predicate_sequence.hpp"
 #include "events.hpp"
 #include "states.hpp"
+#include "fsm/fsm.hpp"
 
 #include <iostream>
 #include <thread>
@@ -16,12 +17,11 @@ namespace provider {
 
 bool StartETW(void) {
     using namespace boost::sml;
-    sm<fsm::mcc> sm;
-    assert(sm.is(state<fsm::off>) == true);
-    sm.process_event(fsm::launcher_start{});
-    assert(sm.is(state<fsm::launching>) == true);
-
-
+    sm<fsm::machines::mcc> sm;
+    assert(sm.is(state<fsm::states::off>) == true);
+    sm.process_event(fsm::events::launcher_start{});
+    assert(sm.is(state<fsm::states::launching>) == true);
+    fsm::transitions::trigger_handler th{ fsm::machines::trigger1, fsm::machines::trigger2 };
     ctfsm::fsm<fsm2::states::mcc_initial> fsm;
     fsm.handle_event<fsm2::events::start>();
 

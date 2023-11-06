@@ -3,7 +3,7 @@
 #include <fsm/fsm.hpp>
 #include "..\utility.hpp"
 #include "static_predicates.hpp"
-
+#include "transitions/sequences.hpp"
 namespace mccinfo {
 namespace fsm2 {
 namespace states {
@@ -56,7 +56,7 @@ template <typename Derived> struct trace_event_handler {
             krabs::parser parser(schema);
 
             if (schema.event_opcode() != 11) { // Prevent Process_Terminate (Event Version(2))
-                // perhaps log
+                
             }
         }
         if (Derived::seq.is_complete()) {
@@ -98,8 +98,7 @@ struct mcc_loading : public trace_event_handler<mcc_loading> {
     static constexpr std::string_view id{"MCC:LOADING"};
     // static constinit ctfsm::fsm<fsm::states::launch_initial> fsm;
 
-    static constexpr auto seq =
-        make_predicate_sequence<events::launcher_end>(&predicates::launcher_end_pred);
+    static constexpr auto seq = make_predicate_sequence<events::launcher_end>(&predicates::launcher_end_pred);
 
     void on_enter() {
         std::cout << "mcc_loading entered" << std::endl;
