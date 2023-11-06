@@ -3,6 +3,7 @@
 #include <boost/sml.hpp>
 #include <cstdio>
 #include <cassert>
+
 #include "..\..\query.hpp"
 #include "..\states\mcc_states.hpp"
 #include "..\events\mcc_events.hpp"
@@ -10,17 +11,12 @@
 #include "..\transitions\sequences.hpp"
 #include "..\transitions\triggers.hpp"
 
-
-
 namespace mccinfo {
 namespace fsm {
 namespace machines {
 
-static auto seq1 = fsm::predicates::details::make_sequence<events::launcher_start>(
-    &fsm2::predicates::launcher_start_pred);
-
-static auto seq2 = fsm::predicates::details::make_sequence<events::launcher_start>(
-    &fsm2::predicates::launcher_end_pred);
+inline constinit auto seq1 = fsm::predicates::details::make_sequence(&fsm2::predicates::launcher_start_pred);
+inline constinit auto seq2 = fsm::predicates::details::make_sequence(&fsm2::predicates::launcher_end_pred);
 
 static auto trigger1 = transitions::make_trigger<events::launcher_start>(&seq1);
 static auto trigger2 = transitions::make_trigger<events::launcher_terminate>(&seq2);

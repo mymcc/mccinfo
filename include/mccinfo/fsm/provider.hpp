@@ -21,7 +21,7 @@ bool StartETW(void) {
     assert(sm.is(state<fsm::states::off>) == true);
     sm.process_event(fsm::events::launcher_start{});
     assert(sm.is(state<fsm::states::launching>) == true);
-    fsm::transitions::trigger_handler th{ fsm::machines::trigger1, fsm::machines::trigger2 };
+    //fsm::transitions::trigger_handler th{ fsm::machines::trigger1, fsm::machines::trigger2 };
     ctfsm::fsm<fsm2::states::mcc_initial> fsm;
     fsm.handle_event<fsm2::events::start>();
 

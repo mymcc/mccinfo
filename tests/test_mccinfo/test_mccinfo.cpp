@@ -1,10 +1,10 @@
 #include <iostream>
 #include <iomanip>
-
 #include "mccinfo.hpp"
 
 constexpr uint8_t align = 18;
 
+    namespace fsm{ namespace events {struct some_event{};}}
 int main(int argc, char **argv) {
     auto sii = mccinfo::query::LookForSteamInstallInfo();
     if (sii.has_value()) {
@@ -29,6 +29,8 @@ int main(int argc, char **argv) {
         std::wcout << std::left << std::setw(align) << L"MCC PID: " << L"NO PID FOUND" << std::endl;
     }
 
+    std::cout << cometa::cfunc_sign<fsm::events::some_event>().c_str() << std::endl;
+    std::cout << cometa::ctype_name<fsm::events::some_event>().c_str() << std::endl;
     mccinfo::fsm2::provider::StartETW();
 
     return 0;

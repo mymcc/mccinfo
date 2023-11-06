@@ -21,7 +21,8 @@ project "mccinfo"
         "%{IncludeDir.krabs}",
         "%{IncludeDir.compiletimefsm}",
         "%{IncludeDir.lockfree}",
-        "%{IncludeDir.sml}"
+        "%{IncludeDir.sml}",
+        "%{IncludeDir.cometa}",
     }
 
     links

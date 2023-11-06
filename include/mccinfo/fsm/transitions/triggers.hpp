@@ -1,8 +1,8 @@
 #pragma once
 
-#include <utility>
-#include <typeinfo>
-#include <typeindex>
+#include <cstdint>
+#include <cometa.hpp>
+#include <cident.h>
 #include "sequences.hpp"
 
 namespace mccinfo {
@@ -10,8 +10,8 @@ namespace fsm {
 namespace transitions {
 
 template <typename evt, typename seq>
-std::pair<std::type_index, predicates::details::sequence_base*> make_trigger(seq* _seq) {
-    return std::make_pair<std::type_index, predicates::details::sequence_base*>(typeid(evt), _seq);
+constexpr std::pair<cometa::type_id_t, predicates::details::sequence_base*> make_trigger(seq* _seq) {
+    return {cometa::ctypeid<evt>(), _seq};
 }
 
 struct trigger_handler {
@@ -26,7 +26,7 @@ struct trigger_handler {
     }
 
   private:
-    std::unordered_map<std::type_index, fsm::predicates::details::sequence_base*> _triggers;
+    std::unordered_map<cometa::type_id_t, fsm::predicates::details::sequence_base*> _triggers;
 };
 }
 }

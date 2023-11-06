@@ -19,7 +19,7 @@ namespace details {
         virtual bool is_complete() const = 0;
 	};
 
-	template <typename event, std::size_t N>
+	template <std::size_t N>
 	struct sequence : public sequence_base {
       public:
 		  template <typename... predicates> 
@@ -42,12 +42,12 @@ namespace details {
 		  std::array<krabs::predicates::details::predicate_base*, N> _seq;
 	};
 
-	template <typename event, typename... predicates>
-	sequence(event, predicates...) -> sequence<event, sizeof...(predicates)>;
+	template <typename... predicates>
+	sequence(predicates...) -> sequence<sizeof...(predicates)>;
 
-	template <typename event, typename... predicates>
+	template <typename... predicates>
 	constexpr auto make_sequence(predicates... preds) {
-		return sequence<event, sizeof...(preds)>{preds...};
+		return sequence<sizeof...(preds)>{preds...};
 	}
 } // details
 

@@ -1,8 +1,5 @@
 #pragma once
-#include <utility>
-#include <typeinfo>
-#include <typeindex>
-#include <unordered_map>
+
 #include "..\static_predicates.hpp"
 #include "..\predicate_sequence.hpp"
 #include "..\transitions\sequences.hpp"

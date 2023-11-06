@@ -7,6 +7,7 @@ IncludeDir["krabs"] = "../external/krabsetw"
 IncludeDir["compiletimefsm"] = "../external/compile-time-fsm/src"
 IncludeDir["lockfree"] = "../external/lockfree"
 IncludeDir["sml"] = "../external/sml/include"
+IncludeDir["cometa"] = "../external/cometa/include"
 LibraryDir = {}
 
 group "external"
