@@ -3,9 +3,8 @@
 namespace mccinfo {
 namespace fsm {
 namespace states {
-class off;
-class launching;
-class on;
-} // namespace states
+class eac_off;
+class eac_on;
+}
 } // namespace fsm
 } // namespace mccinfo

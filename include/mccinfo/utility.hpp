@@ -7,11 +7,19 @@
 #include <tlhelp32.h>
 #undef NOMINMAX
 
+#include <cstdint>
+#pragma warning(push)
+#pragma warning(disable : 4068)
+#pragma warning(disable : 4996)
+#include <cometa.hpp>
+#include <cident.h>
+#pragma warning(pop)
+#include <string>
 #include <vector>
 #include <fstream>
 #include <optional>
 #include <filesystem>
-
+#include <span>
 namespace mccinfo {
 namespace utility {
 class atomic_mutex {
@@ -43,6 +51,53 @@ class atomic_guard {
   private:
     atomic_mutex &m_Mutex;
 };
+
+template <typename T>
+constexpr const char* func_sig() {
+    #ifdef _MSC_VER
+    return __FUNCSIG__;
+    #else
+    return __PRETTY_FUNCTION__;
+    #endif
+}
+
+constexpr auto parse_type(std::string_view sv) {
+    auto start = sv.find_last_of('<');
+    auto end = sv.find_first_of('>');
+
+    if (start == std::string_view::npos || end == std::string_view::npos || end < start) {
+        return sv;
+    }
+
+    return sv.substr(start, end - start + 1);
+}
+
+constexpr auto remove_namespaces(std::string_view sv) {
+    auto last = sv.find_last_of(':');
+    if (last == std::string_view::npos) {
+        return sv;
+    }
+    return sv.substr(last + 1, sv.size() - (last + 1) - 1);
+}
+
+template <typename T>
+constexpr auto make_type_name() {
+    return parse_type(func_sig<T>());
+}
+
+template <typename T>
+constexpr auto make_type_name_minimal() {
+    return remove_namespaces(parse_type(func_sig<T>()));
+}
+
+template <typename T> struct type_hash {
+    static constexpr T type;
+    static constexpr std::string_view name{make_type_name<T>()};
+    static constexpr std::string_view name_minimal{make_type_name_minimal<T>()};
+};
+
+template <typename T>
+static constexpr auto type_hash_v = type_hash<T>::value;
 
 std::optional<std::wstring> ConvertBytesToWString(const std::string &bytes) {
     int required_size =

@@ -15,12 +15,26 @@ namespace mccinfo {
 namespace fsm2 {
 namespace provider {
 
+
 bool StartETW(void) {
     using namespace boost::sml;
-    sm<fsm::machines::mcc> sm;
-    assert(sm.is(state<fsm::states::off>) == true);
-    sm.process_event(fsm::events::launcher_start{});
-    assert(sm.is(state<fsm::states::launching>) == true);
+    sm<fsm::machines::mcc> sm1;
+    auto sm2 = sm1;
+    
+    fsm::controller<> sm3{};
+    std::cout << utility::type_hash<sm<fsm::machines::mcc> >::name << std::endl;
+    assert(sm1.is(state<fsm::states::off>) == true);
+    assert(sm2.is(state<fsm::states::off>) == true);
+
+
+    sm1.process_event(fsm::events::launcher_start{});
+    assert(sm1.is(state<fsm::states::launching>) == true);
+    assert(sm2.is(state<fsm::states::off>) == true);
+
+    sm2.process_event(fsm::events::launcher_start{});
+    assert(sm2.is(state<fsm::states::launching>) == true);
+    
+
     //fsm::transitions::trigger_handler th{ fsm::machines::trigger1, fsm::machines::trigger2 };
     ctfsm::fsm<fsm2::states::mcc_initial> fsm;
     fsm.handle_event<fsm2::events::start>();
@@ -38,12 +52,15 @@ bool StartETW(void) {
     krabs::event_filter filter{krabs::predicates::any_of(
         {&predicates::is_launcher, &predicates::is_eac, &predicates::is_mcc})};
 
-    filter.add_on_event_callback([&fsm](const EVENT_RECORD &record,
+    filter.add_on_event_callback([&fsm, &sm3](const EVENT_RECORD &record,
                               const krabs::trace_context &trace_context){
+            sm3.handle_trace_event(record, trace_context);
             fsm.invoke_on_current([&](auto &&current, auto &_fsm) {
                 current.handle_trace_event<decltype(fsm)>(&fsm, record, trace_context);
         });
     });
+
+
     
     process_provider.add_filter(filter);
     trace.enable(process_provider);

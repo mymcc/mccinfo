@@ -3,7 +3,7 @@
 #include <fsm/fsm.hpp>
 #include "..\utility.hpp"
 #include "static_predicates.hpp"
-#include "transitions/sequences.hpp"
+
 namespace mccinfo {
 namespace fsm2 {
 namespace states {

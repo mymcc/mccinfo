@@ -23,6 +23,7 @@ project "mccinfo"
         "%{IncludeDir.lockfree}",
         "%{IncludeDir.sml}",
         "%{IncludeDir.cometa}",
+        "%{IncludeDir.frozen}",
     }
 
     links

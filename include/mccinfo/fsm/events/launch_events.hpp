@@ -2,10 +2,9 @@
 
 namespace mccinfo {
 namespace fsm {
-namespace states {
-class off;
-class launching;
-class on;
-} // namespace states
+namespace events {
+struct eac_start{};
+struct eac_terminate{};
+}
 } // namespace fsm
 } // namespace mccinfo

@@ -19,3 +19,6 @@
 [submodule "external/cometa"]
 	path = external/cometa
 	url = https://github.com/mymcc/cometa
+[submodule "external/frozen"]
+	path = external/frozen
+	url = https://github.com/serge-sans-paille/frozen

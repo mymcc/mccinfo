@@ -30,7 +30,7 @@ namespace details {
 
           virtual bool try_advance(const EVENT_RECORD &record,
                                    const krabs::trace_context &trace_context) const override {
-            return (is_complete()) ? false : (*_seq[current++])(record, trace_context);
+            return (this->is_complete()) ? false : (*_seq[current++])(record, trace_context);
 		  }
 
           virtual bool is_complete() const override {
