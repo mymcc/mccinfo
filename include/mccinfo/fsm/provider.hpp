@@ -55,9 +55,9 @@ bool StartETW(void) {
     filter.add_on_event_callback([&fsm, &sm3](const EVENT_RECORD &record,
                               const krabs::trace_context &trace_context){
             sm3.handle_trace_event(record, trace_context);
-            fsm.invoke_on_current([&](auto &&current, auto &_fsm) {
-                current.handle_trace_event<decltype(fsm)>(&fsm, record, trace_context);
-        });
+        //    fsm.invoke_on_current([&](auto &&current, auto &_fsm) {
+        //        current.handle_trace_event<decltype(fsm)>(&fsm, record, trace_context);
+        //});
     });
 
 

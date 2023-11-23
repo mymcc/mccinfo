@@ -29,9 +29,6 @@ int main(int argc, char **argv) {
         std::wcout << std::left << std::setw(align) << L"MCC PID: " << L"NO PID FOUND" << std::endl;
     }
 
-    std::cout << cometa::cfunc_sign<fsm::events::some_event>().c_str() << std::endl;
-    std::cout << cometa::ctype_name<fsm::events::some_event>().c_str() << std::endl;
-
     mccinfo::fsm2::provider::StartETW();
 
     return 0;

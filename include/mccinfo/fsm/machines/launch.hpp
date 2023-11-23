@@ -13,8 +13,8 @@ struct launch {
     using namespace events;
 
     return make_transition_table(
-        *state<eac_off> + event<eac_start> = state<eac_on>,
-        state<eac_on> + event<eac_terminate> = state<eac_off>
+        *boost::sml::state<eac_off> + event<eac_start> = boost::sml::state<eac_on>,
+        boost::sml::state<eac_on> + event<eac_terminate> = boost::sml::state<eac_off>
     );
 }
 };

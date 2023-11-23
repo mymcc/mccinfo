@@ -28,6 +28,19 @@ namespace details {
                           "The number of predicates must match the template parameter N.");
 		  }
 
+          sequence(const sequence& other) : current(0), _seq(other._seq) {}
+
+          sequence& operator=(const sequence& other) {
+              if (this != &other) {
+                  current = 0;
+                  _seq = other._seq;
+              }
+              return *this;
+          }
+
+          sequence(sequence&&) = delete;
+          sequence& operator=(sequence&&) = delete;
+
           virtual bool try_advance(const EVENT_RECORD &record,
                                    const krabs::trace_context &trace_context) const override {
             return (this->is_complete()) ? false : (*_seq[current++])(record, trace_context);

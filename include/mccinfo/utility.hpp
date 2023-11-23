@@ -20,6 +20,15 @@
 #include <optional>
 #include <filesystem>
 #include <span>
+#include <variant>
+#include <tuple>
+#include <stdexcept>
+#include <functional>
+#include <any>
+#include <type_traits>
+#include <memory>
+#include <stdexcept>
+
 namespace mccinfo {
 namespace utility {
 class atomic_mutex {
@@ -51,6 +60,33 @@ class atomic_guard {
   private:
     atomic_mutex &m_Mutex;
 };
+
+template<auto Id>
+struct counter {
+    using tag = counter;
+
+    struct generator {
+        friend consteval auto is_defined(tag)
+        { return true; }
+    };
+    friend consteval auto is_defined(tag);
+
+    template<typename Tag = tag, auto = is_defined(Tag{})>
+    static consteval auto exists(auto)
+    { return true; }
+
+    static consteval auto exists(...)
+    { return generator(), false; }
+};
+
+template<auto Id = int{}, auto = []{}>
+consteval auto unique_id() {
+    if constexpr (counter<Id>::exists(Id)) {
+        return unique_id<Id + 1>();
+    } else {
+        return Id;
+    }
+}
 
 template <typename T>
 constexpr const char* func_sig() {
@@ -90,14 +126,19 @@ constexpr auto make_type_name_minimal() {
     return remove_namespaces(parse_type(func_sig<T>()));
 }
 
+unsigned constexpr const_hash(std::string_view sv) {
+    return *sv.data() ?
+        static_cast<unsigned int>(*sv.data()) + 33 * const_hash(sv.data() + 1) :
+        5381;
+}
+
 template <typename T> struct type_hash {
-    static constexpr T type;
+    static constexpr unsigned int hash{const_hash(make_type_name<T>())};
     static constexpr std::string_view name{make_type_name<T>()};
     static constexpr std::string_view name_minimal{make_type_name_minimal<T>()};
 };
 
-template <typename T>
-static constexpr auto type_hash_v = type_hash<T>::value;
+template <typename evt> static constexpr auto id = utility::type_hash<evt>::hash;
 
 std::optional<std::wstring> ConvertBytesToWString(const std::string &bytes) {
     int required_size =

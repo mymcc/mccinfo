@@ -3,12 +3,11 @@
 namespace mccinfo {
 namespace fsm {
 namespace events {
-struct event_base {};
 
-struct launcher_start : public event_base {};
-struct launcher_terminate : public event_base {};
-struct mcc_start : public event_base{};
-struct mcc_terminate : public event_base{};
+struct launcher_start{};
+struct launcher_terminate  {};
+struct mcc_start {};
+struct mcc_terminate{};
 
 } //namespace events
 } // namespace fsm
