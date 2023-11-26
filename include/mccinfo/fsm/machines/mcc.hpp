@@ -21,12 +21,8 @@ namespace mccinfo {
 namespace fsm {
 namespace machines {
 
-inline constinit auto seq1 =
-    fsm::predicates::details::make_sequence(&fsm2::predicates::launcher_start_pred);
-inline constinit auto seq2 =
-    fsm::predicates::details::make_sequence(&fsm2::predicates::launcher_end_pred);
-
 constexpr auto can_find_mcc = []() { return query::LookForMCCProcessID().has_value(); };
+
 struct mcc {
     auto operator()() const {
     using namespace boost::sml;

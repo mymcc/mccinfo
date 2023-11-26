@@ -1,11 +1,18 @@
 #pragma once
 //#define BOOST_SML_CREATE_DEFAULT_CONSTRUCTIBLE_DEPS
+#define MCCFSM_INLINE \
+    inline constinit auto
+
+#define MCCFSM_STATIC \
+    static constexpr auto
+
 #include "machines/mcc.hpp"
 #include "machines/launch.hpp"
 
 #include "edges/edges.hpp"
 #include <iostream>
 #include <string>
+
 namespace mccinfo {
 namespace fsm {
 template <class = class Dummy> class controller {
@@ -15,7 +22,7 @@ template <class = class Dummy> class controller {
         utility::atomic_guard lk(lock);
 
         auto visit = [&](auto state) {
-            states::BonusStateVisitor<decltype(mcc_sm)> visitor(mcc_sm, record, trace_context);
+            states::BonusStateVisitor<decltype(mcc_sm)> visitor(mcc_sm, record, trace_context, sc);
             mcc_sm.visit_current_states(visitor);
         };
         mcc_sm.visit_current_states(visit);
@@ -26,6 +33,7 @@ template <class = class Dummy> class controller {
     //boost::sml::sm<machines::mcc, machines::launch> sm;
 
     boost::sml::sm<machines::mcc> mcc_sm;
+    states::state_context sc{};
     //boost::sml::sm<machines::launch> launch_sm;
 };
 } // namespace fsm

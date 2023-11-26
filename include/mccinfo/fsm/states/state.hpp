@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include "..\edges\edges.hpp"
 #include "..\events\events.hpp"
 
@@ -26,19 +27,40 @@ struct state {
         }
         return {};
     }
-
 };
 
-class state_context
-{
-    std::unordered_map<unsigned int, edges::edge_container_base *> edgecontext;
+struct state_context {
+    template <typename _State>
+    //events::event_t handle_trace_event(const EVENT_RECORD &record,
+    void handle_trace_event(const EVENT_RECORD &record,
+                                       const krabs::trace_context &trace_context) {
+        if (auto it = edge_context.find(utility::id<_State>); it != edge_context.end() ) {
+            //return findit->first;
+            std::cout << "state context cache hit\n";
+            it->second->handle_trace_event(record, trace_context);
+
+        } else {
+            std::cout << "state context cache miss\n";
+            auto edges = _State::clone_edges();
+            std::unique_ptr<edges::edge_container_base> ptr =
+                std::make_unique<decltype(edges)>(std::move(edges));
+            ptr->handle_trace_event(record, trace_context);
+            edge_context.emplace(utility::id<_State>, std::move(ptr));
+        }
+    }
+
+  private:
+    std::unordered_map<unsigned int, std::unique_ptr<edges::edge_container_base>> edge_context;
 };
 
-template <typename StateMachine>
-class BonusStateVisitor
-{
-public:
-  explicit BonusStateVisitor(const StateMachine &state_machine, const EVENT_RECORD& event_record, const krabs::trace_context& trace_context) : state_machine_{state_machine}, event_record_(event_record), trace_context_(trace_context){}
+template <typename StateMachine> class BonusStateVisitor {
+  public:
+  explicit BonusStateVisitor(const StateMachine &state_machine, const EVENT_RECORD& event_record, const krabs::trace_context& trace_context, state_context& sc) : 
+      state_machine_{state_machine}, 
+      event_record_(event_record), 
+      trace_context_(trace_context), 
+      state_context_{sc} {
+}
 
   // Overload to handle states that have nested states
   template <typename CompositeState>
@@ -75,12 +97,14 @@ public:
     std::cout << utility::make_type_name_minimal<TSimpleState>() << '\n';
     //auto self = TSimpleState();
     TSimpleState::handle_trace_event(event_record_, trace_context_);
+    state_context_.handle_trace_event<TSimpleState>(event_record_, trace_context_);
   }
 
 private:
   const StateMachine &state_machine_;
   const EVENT_RECORD &event_record_;
   const krabs::trace_context &trace_context_;
+  state_context& state_context_;
 };
 } //namespace states
 } //namespace fsm
