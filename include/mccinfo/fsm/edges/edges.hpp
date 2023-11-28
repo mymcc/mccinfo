@@ -30,17 +30,38 @@ class edge {
                 sm->process_event(new_evt); 
             }, _edge.second);
         }
+        
+        priority get_priority() const {
+            return _prio;
+        }
+
+        events::event_t get_event() const {
+            return _edge.second;
+        }
+
+        virtual bool handle_trace_event(const EVENT_RECORD &record,
+                                        const krabs::trace_context &trace_context) {
+            bool result = _edge.first->try_advance(record, trace_context);
+            std::cout << "Sequence Result: " << ((result) ? "advanced" : "nil") << '\n';
+            return _edge.first->is_complete();
+        }
+
+        void reset() {
+            _edge.first->reset();
+        }
+
 
     private:
-        priority _prio{priority::weak};
+        priority _prio{ priority::weak };
         std::pair<details::sequence_base*, events::event_t> _edge;
 };
 
 
 
 struct edge_container_base {
-    virtual void handle_trace_event(const EVENT_RECORD &record,
+    virtual std::optional<events::event_t> handle_trace_event(const EVENT_RECORD &record,
                                const krabs::trace_context &trace_context) = 0;
+        virtual void reset() = 0;
 };
 
 template <size_t N>
@@ -51,9 +72,28 @@ struct edge_container : public edge_container_base {
                     "The number of edges must match the template parameter N.");
 	}
 
-    virtual void handle_trace_event(const EVENT_RECORD &record,
-                       const krabs::trace_context &trace_context) override final {
-    std::cout << "handling an event from inside an edge container!\n";
+    virtual void reset() override
+    {
+        for (auto &_edge : _edges) {
+            _edge.reset();
+        }
+    }
+
+    virtual std::optional<events::event_t> handle_trace_event(const EVENT_RECORD &record,
+                       const krabs::trace_context &trace_context) override final {        
+        std::vector<std::pair<edges::priority, events::event_t>> hot_events;
+
+        for (auto &_edge : _edges) {
+            if (_edge.handle_trace_event(record, trace_context)) {
+                hot_events.push_back({_edge.get_priority(), _edge.get_event()});
+            }
+        }
+        if (hot_events.size()) {
+            events::event_t new_event = hot_events[0].second;
+            return new_event;
+        }
+        else
+            return std::nullopt;
     }
 
   private:

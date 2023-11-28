@@ -4,7 +4,6 @@
 
 constexpr uint8_t align = 18;
 
-namespace fsm{ namespace events {struct some_event{};}}
 int main(int argc, char **argv) {
     auto sii = mccinfo::query::LookForSteamInstallInfo();
     if (sii.has_value()) {
@@ -29,7 +28,7 @@ int main(int argc, char **argv) {
         std::wcout << std::left << std::setw(align) << L"MCC PID: " << L"NO PID FOUND" << std::endl;
     }
 
-    mccinfo::fsm2::provider::StartETW();
+    mccinfo::fsm::provider::StartETW();
 
     return 0;
 }

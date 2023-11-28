@@ -11,7 +11,8 @@ namespace events {
 		events::launcher_start,
 		events::launcher_terminate,
 		events::mcc_start,
-		events::mcc_terminate>;
+		events::mcc_terminate,
+		events::mcc_found>;
 }
 }
 }

@@ -10,7 +10,7 @@
 #include <string>
 
 namespace mccinfo {
-namespace fsm2 {
+namespace fsm {
 namespace predicates {
 inline auto is_launcher =
     krabs::predicates::property_is(L"ImageFileName", std::string("mcclauncher.exe"));
@@ -34,6 +34,11 @@ inline krabs::predicates::all_of launcher_end_pred({
 
 inline krabs::predicates::all_of eac_start_pred({
     &is_eac,
+    &process_start,
+});
+
+inline krabs::predicates::all_of mcc_process_start({
+    &is_mcc,
     &process_start,
 });
 

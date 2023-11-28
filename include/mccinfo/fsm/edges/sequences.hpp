@@ -18,6 +18,7 @@ struct sequence_base {
     virtual bool try_advance(const EVENT_RECORD &record,
                              const krabs::trace_context &trace_context) const = 0;
     virtual bool is_complete() const = 0;
+    virtual void reset() = 0;
 };
 
 template <std::size_t N> struct sequence : public sequence_base {
@@ -43,11 +44,21 @@ template <std::size_t N> struct sequence : public sequence_base {
 
     virtual bool try_advance(const EVENT_RECORD &record,
                              const krabs::trace_context &trace_context) const override {
-        return (this->is_complete()) ? false : (*_seq[current++])(record, trace_context);
+        if (!is_complete()) {
+            if ((*_seq[current])(record, trace_context)) {
+                current += 1;
+                return true;
+            }
+        }
+        return false;
     }
 
     virtual bool is_complete() const override {
         return current == N;
+    }
+
+    virtual void reset() override {
+        current = 0;
     }
 
   private:

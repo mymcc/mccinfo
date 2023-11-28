@@ -30,9 +30,10 @@ struct mcc {
     using namespace events;
 
     return make_transition_table(
-        * boost::sml::state<off> + event<launcher_start> [!can_find_mcc] = boost::sml::state<launching>,
-        boost::sml::state<launching> + event<launcher_terminate>[can_find_mcc] = boost::sml::state<on>,
-        boost::sml::state<on> + event<mcc_terminate> = boost::sml::state<off>
+        *boost::sml::state<off> + event<launcher_start> /*[!can_find_mcc]*/ = boost::sml::state<launching>,
+        boost::sml::state<launching> + event<launcher_terminate> /*[can_find_mcc]*/ = boost::sml::state<on>,
+        boost::sml::state<on> + event<mcc_terminate> = boost::sml::state<off>,
+        boost::sml::state<off> + event<mcc_found> = boost::sml::state<on>
     );
 }
 };

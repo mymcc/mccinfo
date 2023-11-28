@@ -9,6 +9,7 @@
 #include <wil/registry.h>
 #undef NOMINMAX
 
+#include <queue>
 #include <string>
 #include <fstream>
 #include <iostream>
