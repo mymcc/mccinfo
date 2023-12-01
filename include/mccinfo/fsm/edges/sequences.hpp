@@ -68,7 +68,30 @@ template <std::size_t N> struct sequence : public sequence_base {
 template <typename... predicates> sequence(predicates...) -> sequence<sizeof...(predicates)>;
 
 } // details
+/*
+template <std::size_t N> struct consecutive_sequence : public sequence<1> {
+  public:
+      virtual bool try_advance(const EVENT_RECORD &record,
+                             const krabs::trace_context &trace_context) const override {
+        if (!is_complete()) {
+            if ((*_seq[current])(record, trace_context)) {
+                current += 1;
+                return true;
+            } else {
+                current = 0;
+            }
+        } else {
+            current = 0;
+        }
+        return false;
+    }
 
+    virtual bool is_complete() const override {
+        return current == N;
+    }
+};
+
+*/
 template <typename... predicates>
 constexpr auto make_sequence(predicates... preds) {
 	return details::sequence<sizeof...(preds)>{preds...};

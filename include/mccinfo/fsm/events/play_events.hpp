@@ -3,8 +3,12 @@
 namespace mccinfo {
 namespace fsm {
 namespace events {
-struct eac_start {};
-struct eac_terminate{};
-}
+
+struct load_start{};
+struct match_start{};
+struct match_end{};
+struct match_found{};
+
+} // namespace events
 } // namespace fsm
 } // namespace mccinfo

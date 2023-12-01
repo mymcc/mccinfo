@@ -7,94 +7,129 @@
     static constexpr auto
 
 #include "machines/mcc.hpp"
-#include "machines/launch.hpp"
+#include "machines/play.hpp"
 
 #include "edges/edges.hpp"
 #include <iostream>
 #include <string>
+#include <ostream> 
 
 namespace mccinfo {
 namespace fsm {
 
-void print_trace_event(const EVENT_RECORD &record,
+void print_trace_event(std::wostringstream& woss, const EVENT_RECORD &record,
                                                const krabs::trace_context &trace_context) {
+    woss << L"=============================================================\n";
+
     krabs::schema schema(record, trace_context.schema_locator);
     krabs::parser parser(schema);
 
     if (schema.event_opcode() != 11) { // Prevent Process_Terminate (Event Version(2))
-        std::string imagefilename = parser.parse<std::string>(L"ImageFileName");
+        if (schema.event_opcode() != 64) {
+            if (schema.event_opcode() != 67) {
+                std::string imagefilename = parser.parse<std::string>(L"ImageFileName");
+                std::uint32_t pid = parser.parse<std::uint32_t>(L"ProcessId");
+                
+                woss << schema.task_name() << L"_" << schema.opcode_name();
+                woss << L" (" << schema.event_opcode() << L") ";
+                woss << L" ProcessId=" << pid;
+                auto ws = utility::ConvertBytesToWString(imagefilename);
+                if (ws.has_value())
+                    woss << L" ImageFileName=" << ws.value();
 
-        std::wcout << schema.task_name() << L"_" << schema.opcode_name();
-        std::wcout << L" (" << schema.event_opcode() << L") ";
-        std::uint32_t pid = parser.parse<std::uint32_t>(L"ProcessId");
-        std::wcout << L" ProcessId=" << pid;
-        std::cout << " ImageFileName=" << imagefilename;
-        
-        std::wcout << std::endl;
+            } else {
+                uint32_t ttid = parser.parse<uint32_t>(L"TTID");
+                uint32_t io_size = parser.parse<uint32_t>(L"IoSize");
+                
+                woss << schema.task_name() << L"_" << schema.opcode_name();
+                woss << L" (" << schema.event_opcode() << L") ";
+                woss << L" pid=" << std::to_wstring(record.EventHeader.ProcessId);
+                woss << L" ttid=" << std::to_wstring(ttid);
+                woss << L" IoSize=" << std::to_wstring(io_size);
+            }
+        } else {
+            std::wstring imagefilename = parser.parse<std::wstring>(L"OpenPath");
+            woss << schema.task_name() << L"_" << schema.opcode_name();
+            woss << L" (" << schema.event_opcode() << L") ";
+            woss << " Path=" << imagefilename;
+        }
+        woss << std::endl;
     }
 }
 
-constexpr auto can_find_launcher = []() {
-    auto can_find_launcher_impl = []() {
-        auto mcc_launcher_pid = utility::GetProcessIDFromName(std::wstring(L"mcclauncher.exe"));
-        if (mcc_launcher_pid.has_value()) {
-            return mcc_launcher_pid;
-        } else {
-            std::optional<size_t> ret = std::nullopt;
-            return ret;
-        }
-    };
-    return can_find_launcher_impl().has_value();
-};
-
 template <class = class Dummy> class controller {
   public:
-    void initialize() {
-        if (!initialized) {
-            if (machines::can_find_mcc() && !can_find_launcher()) {
-                mcc_sm.process_event(events::mcc_found{});
-            }
-        }
-    }
     void handle_trace_event(const EVENT_RECORD &record,
                             const krabs::trace_context &trace_context) {
         utility::atomic_guard lk(lock);
 
-        std::cout << "=============================================================\n";
-        print_trace_event(record, trace_context);
+        if ((mcc_pid == UINT32_MAX) || (mcc_pid == record.EventHeader.ProcessId)) {
+            handle_trace_event_impl<decltype(mcc_sm)>(mcc_sm, record, trace_context);
+            handle_trace_event_impl<decltype(play_sm)>(play_sm, record, trace_context);
+        }
+    }
+  private:
+    template<typename _StateMachine>
+    void handle_trace_event_impl(_StateMachine& sm, const EVENT_RECORD &record, const krabs::trace_context &trace_context) {
+
+        std::wostringstream woss;
+        print_trace_event(woss, record, trace_context);
 
         auto visit = [&](auto state) {
-            states::BonusStateVisitor<decltype(mcc_sm)> visitor(mcc_sm, record, trace_context, sc);
-            mcc_sm.visit_current_states(visitor);
+            states::BonusStateVisitor<_StateMachine> visitor(sm, record, trace_context, sc, woss);
+            sm.visit_current_states(visitor);
         };
-        mcc_sm.visit_current_states(visit);
-        
+        sm.visit_current_states(visit);
+
+        bool current_is_off = false;
+        if (!mcc_on) {
+            current_is_off = mcc_sm.is(boost::sml::state<states::off>);
+        }
         auto _evts = sc.pop_event_from_queue();
         while (_evts.has_value()) {
             std::visit(
                 [&](auto &arg) {
-                    std::cout << "Sending Event: " << utility::type_hash<decltype(arg)>::name << "\n";
-                    mcc_sm.process_event(arg);
-                    std::cout << "" << std::flush;
+                    auto ws = utility::ConvertBytesToWString(std::string(utility::type_hash<decltype(arg)>::name));
+                    if (ws.has_value())
+                    woss << L"Sending Event: " << ws.value() << L"\n";
+                    sm.process_event(arg);
                 }, _evts.value());
             _evts = sc.pop_event_from_queue();
         }
 
         auto visit2 = [&](auto state) {
-            states::StatePrinter<decltype(mcc_sm)> visitor(mcc_sm);
-            mcc_sm.visit_current_states(visitor);
+            states::StatePrinter<_StateMachine> visitor(sm, woss);
+            sm.visit_current_states(visitor);
         };
-        mcc_sm.visit_current_states(visit2);
+        sm.visit_current_states(visit2);
 
+        if (!mcc_on && mcc_sm.is(boost::sml::state<states::on>)) {
+            if (current_is_off) {
+                krabs::schema schema(record, trace_context.schema_locator);
+                krabs::parser parser(schema);
+                std::uint32_t pid = parser.parse<std::uint32_t>(L"ProcessId");
+                mcc_pid = pid;
+            } else {
+                mcc_pid = record.EventHeader.ProcessId;
+            }
+            mcc_on = true;
+        } 
+        else if (mcc_on && mcc_sm.is(boost::sml::state<states::off>)) {
+            mcc_pid = UINT32_MAX;
+            mcc_on = false;
+        }
+        if (log_full) std::wcout << woss.str() << std::flush;
     }
   private:
     utility::atomic_mutex lock;
-    //boost::sml::sm<machines::mcc, machines::launch> sm;
-
     boost::sml::sm<machines::mcc> mcc_sm;
+    boost::sml::sm<machines::play> play_sm;
     states::state_context sc{};
-    bool initialized = false;
-    //boost::sml::sm<machines::launch> launch_sm;
+    uint32_t mcc_pid = UINT32_MAX;
+    bool hotstart = false;
+    bool mcc_on = false;
+    //bool log_full = false;
+    bool log_full = true;
 };
 } // namespace fsm
 } // namespace mccinfo

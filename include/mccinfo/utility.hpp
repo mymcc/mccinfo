@@ -193,10 +193,10 @@ std::optional<std::filesystem::path> ExpandPath(const std::filesystem::path &pat
     return std::filesystem::absolute(dst);
 }
 
-std::optional<size_t> GetProcessIDFromName(const std::wstring &process_name) {
+std::optional<DWORD> GetProcessIDFromName(const std::wstring &process_name) {
     HANDLE hSnapshot;
     PROCESSENTRY32 pe;
-    size_t pid = 0;
+    DWORD pid = 0;
     BOOL hResult;
 
     hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -218,10 +218,10 @@ std::optional<size_t> GetProcessIDFromName(const std::wstring &process_name) {
     return std::nullopt;
 }
 
-std::optional<size_t> GetParentProcessID(size_t pid) {
+std::optional<DWORD> GetParentProcessID(DWORD pid) {
     HANDLE hSnapshot;
     PROCESSENTRY32 pe;
-    size_t ppid = 0;
+    DWORD ppid = 0;
     BOOL hResult;
 
     hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
@@ -272,5 +272,48 @@ bool IsThreadInProcess(DWORD threadID, DWORD processID) {
     CloseHandle(hThreadSnap);
     return false;
 }
+std::optional<DWORD> GetProcessIDFromThreadID(DWORD threadID) {
+    HANDLE threadHandle = OpenThread(THREAD_ALL_ACCESS, FALSE, threadID);
+    if (threadHandle == NULL) return std::nullopt;
+    else {
+        return GetProcessIdOfThread(threadHandle);
+    }
+}
+
+std::optional<std::string> ModuleBaseNameFromProcessID(DWORD processID) {
+    std::optional<std::string> ret;
+    HANDLE handle = OpenProcess(
+        PROCESS_QUERY_LIMITED_INFORMATION,
+        FALSE,
+        processID /* This is the PID, you can find one from windows task manager */
+    );
+    if (handle) {
+        DWORD buffSize = 1024;
+        CHAR buffer[1024];
+        if (QueryFullProcessImageNameA(handle, 0, buffer, &buffSize))
+        {
+            ret = buffer;
+        }
+        else
+        {
+            ret = std::nullopt;
+        }
+        CloseHandle(handle);
+    } 
+    else {
+        ret = std::nullopt;
+    }
+    return ret;
+}
+
+std::optional<std::string> ModuleBaseNameFromThreadID(DWORD threadID) {
+    auto ret = GetProcessIDFromThreadID(threadID);
+    if (ret.has_value()) {
+        return ModuleBaseNameFromProcessID(ret.value());
+    } else {
+        return std::nullopt;
+    }
+}
+
 } // namespace utility
 } // namespace mccinfo

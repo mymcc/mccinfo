@@ -5,6 +5,7 @@
 #include <any>
 #include <utility>
 #include <array>
+#include <ostream>
 
 #include "..\..\utility.hpp"
 #include "..\events\events.hpp"
@@ -39,10 +40,11 @@ class edge {
             return _edge.second;
         }
 
-        virtual bool handle_trace_event(const EVENT_RECORD &record,
+        virtual bool handle_trace_event(std::wostringstream& woss,
+                                        const EVENT_RECORD &record,
                                         const krabs::trace_context &trace_context) {
             bool result = _edge.first->try_advance(record, trace_context);
-            std::cout << "Sequence Result: " << ((result) ? "advanced" : "nil") << '\n';
+            woss << L"Sequence Result: " << ((result) ? L"advanced" : L"nil") << L'\n';
             return _edge.first->is_complete();
         }
 
@@ -59,7 +61,7 @@ class edge {
 
 
 struct edge_container_base {
-    virtual std::optional<events::event_t> handle_trace_event(const EVENT_RECORD &record,
+    virtual std::optional<events::event_t> handle_trace_event(std::wostringstream& woss, const EVENT_RECORD &record,
                                const krabs::trace_context &trace_context) = 0;
         virtual void reset() = 0;
 };
@@ -79,12 +81,12 @@ struct edge_container : public edge_container_base {
         }
     }
 
-    virtual std::optional<events::event_t> handle_trace_event(const EVENT_RECORD &record,
+    virtual std::optional<events::event_t> handle_trace_event(std::wostringstream& woss, const EVENT_RECORD &record,
                        const krabs::trace_context &trace_context) override final {        
         std::vector<std::pair<edges::priority, events::event_t>> hot_events;
 
         for (auto &_edge : _edges) {
-            if (_edge.handle_trace_event(record, trace_context)) {
+            if (_edge.handle_trace_event(woss, record, trace_context)) {
                 hot_events.push_back({_edge.get_priority(), _edge.get_event()});
             }
         }

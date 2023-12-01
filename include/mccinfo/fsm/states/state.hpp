@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ostream>
 #include <memory>
 #include "..\edges\edges.hpp"
 #include "..\events\events.hpp"
@@ -32,20 +33,20 @@ struct state {
 
 struct state_context {
     template <typename _State>
-    void handle_trace_event(const EVENT_RECORD &record,
+    void handle_trace_event(std::wostringstream& woss, const EVENT_RECORD &record,
                                        const krabs::trace_context &trace_context) {
         std::optional<events::event_t> _evt;
         if (auto it = edge_context.find(utility::id<_State>); it != edge_context.end() ) {
-            std::cout << "State Context Cache: hit\n";
-            _evt = it->second->handle_trace_event(record, trace_context);
+            woss << L"State Context Cache: hit\n";
+            _evt = it->second->handle_trace_event(woss, record, trace_context);
 
         } else {
-            std::cout << "State Context Cache: miss\n";
+            woss << "State Context Cache: miss\n";
             auto edges = _State::clone_edges();
             std::unique_ptr<edges::edge_container_base> ptr =
                 std::make_unique<decltype(edges)>(edges);
             ptr->reset();
-            _evt = ptr->handle_trace_event(record, trace_context);
+            _evt = ptr->handle_trace_event(woss, record, trace_context);
             edge_context.emplace(utility::id<_State>, std::move(ptr));
         }
         if (_evt.has_value())
@@ -75,11 +76,12 @@ struct state_context {
 
 template <typename StateMachine> class BonusStateVisitor {
   public:
-  explicit BonusStateVisitor(const StateMachine &state_machine, const EVENT_RECORD& event_record, const krabs::trace_context& trace_context, state_context& sc) : 
+  explicit BonusStateVisitor(const StateMachine &state_machine, const EVENT_RECORD& event_record, const krabs::trace_context& trace_context, state_context& sc, std::wostringstream& woss) : 
       state_machine_{state_machine}, 
       event_record_(event_record), 
       trace_context_(trace_context), 
-      state_context_{sc} {
+      state_context_{sc}, 
+      woss_{woss} {
 }
 
   // Overload to handle states that have nested states
@@ -113,8 +115,9 @@ template <typename StateMachine> class BonusStateVisitor {
   template <typename TSimpleState>
   void operator()(boost::sml::aux::string<TSimpleState>) const
   {
-    std::cout << "Current State: " << utility::make_type_name_minimal<TSimpleState>() << '\n';
-    state_context_.handle_trace_event<TSimpleState>(event_record_, trace_context_);
+    auto ws = utility::ConvertBytesToWString(std::string(utility::make_type_name_minimal<TSimpleState>()));
+    if (ws.has_value()) woss_ << L"Current State: " << ws.value() << L'\n';
+    state_context_.handle_trace_event<TSimpleState>(woss_, event_record_, trace_context_);
   }
 
 private:
@@ -122,12 +125,14 @@ private:
   const EVENT_RECORD &event_record_;
   const krabs::trace_context &trace_context_;
   state_context& state_context_;
+  std::wostringstream& woss_;
 };
 
 template <typename StateMachine> class StatePrinter {
   public:
-  explicit StatePrinter(const StateMachine &state_machine) : 
-      state_machine_{state_machine} {
+  explicit StatePrinter(const StateMachine &state_machine, std::wostringstream& woss) : 
+      state_machine_{state_machine},
+      woss_{woss} {
   }
 
   // Overload to handle states that have nested states
@@ -161,11 +166,13 @@ template <typename StateMachine> class StatePrinter {
   template <typename TSimpleState>
   void operator()(boost::sml::aux::string<TSimpleState>) const
   {
-    std::cout << "Result State: " << utility::make_type_name_minimal<TSimpleState>() << '\n';
+    auto ws = utility::ConvertBytesToWString(std::string(utility::make_type_name_minimal<TSimpleState>()));
+    if (ws.has_value()) woss_ << L"Result State: " << ws.value() << L'\n';
   }
 
 private:
   const StateMachine &state_machine_;
+  std::wostringstream& woss_;
 };
 
 } //namespace states

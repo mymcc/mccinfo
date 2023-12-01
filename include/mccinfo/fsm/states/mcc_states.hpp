@@ -3,36 +3,38 @@
 #include "state.hpp"
 #include "..\..\utility.hpp"
 #include "..\events\events.hpp"
-#include "..\static_predicates.hpp"
+#include "..\predicates.hpp"
 
 namespace mccinfo {
 namespace fsm {
 namespace states {
 
-MCCFSM_INLINE seq1 =
-    edges::make_sequence(&predicates::launcher_start_pred, &predicates::eac_start_pred);
-
-MCCFSM_INLINE seq2 =
-    edges::make_sequence(&predicates::mcc_process_start, &predicates::launcher_end_pred);
-
-MCCFSM_INLINE seq3 =
-    edges::make_sequence(&fsm::predicates::mcc_process_lossed);
+MCCFSM_INLINE launcher_started = edges::make_sequence(&predicates::launcher_start_pred);
+MCCFSM_INLINE launcher_found = edges::make_sequence(&predicates::mcc_launcher_found);
+MCCFSM_INLINE mcc_started = edges::make_sequence(&predicates::mcc_process_start);
+MCCFSM_INLINE mcc_found_ = edges::make_sequence(&predicates::mcc_process_found);
+MCCFSM_INLINE main_menu_bg_created = edges::make_sequence(&predicates::main_menu_bg_created);
+MCCFSM_INLINE mcc_lossed = edges::make_sequence(&fsm::predicates::mcc_process_lossed);
 
 struct off : public state<off> {
     MCCFSM_STATIC edges = edges::make_edges(
-        std::make_tuple(&seq1, events::launcher_start{})
+        std::make_tuple(&launcher_started, events::launcher_start{}),
+        std::make_tuple(&launcher_found, events::launcher_start{}),
+        std::make_tuple(&mcc_started, events::launcher_start{}), 
+        std::make_tuple(&mcc_found_, events::mcc_found{})
     );
 };
 
 struct launching : public state<launching> {
     MCCFSM_STATIC edges = edges::make_edges( 
-        std::make_tuple(&seq2, events::launcher_terminate{})
+        std::make_tuple(&main_menu_bg_created, events::launch_complete{}),
+        std::make_tuple(&mcc_lossed, events::launch_abort{})
     );
 };
 
 struct on : public state<on> {
     MCCFSM_STATIC edges = edges::make_edges(
-        std::make_tuple(&seq3, events::mcc_terminate{})
+        std::make_tuple(&mcc_lossed, events::mcc_terminate{})
     );
 };
 } // namespace states
