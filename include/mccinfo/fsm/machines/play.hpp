@@ -2,8 +2,8 @@
 
 #include <boost/sml.hpp>
 
-#include "..\..\query.hpp"
-#include "..\states\play_states.hpp"
+#include "mccinfo/query.hpp"
+#include "mccinfo/fsm/states/play_states.hpp"
 
 namespace mccinfo {
 namespace fsm {

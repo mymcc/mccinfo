@@ -6,8 +6,8 @@
 #define MCCFSM_STATIC \
     static constexpr auto
 
-#include "machines/mcc.hpp"
-#include "machines/play.hpp"
+#include "mccinfo/fsm/machines/mcc.hpp"
+#include "mccinfo/fsm/machines/play.hpp"
 
 #include "edges/edges.hpp"
 #include <iostream>

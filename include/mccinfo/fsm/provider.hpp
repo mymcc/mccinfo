@@ -1,6 +1,6 @@
 #pragma once
 
-#include "..\query.hpp"
+#include "mccinfo/query.hpp"
 #include "mccfsm.hpp"
 #include "predicates.hpp"
 #include "filters.hpp"

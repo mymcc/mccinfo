@@ -1,7 +1,7 @@
 #pragma once
 
-#include "mcc_events.hpp"
-#include "play_events.hpp"
+#include "mccinfo/fsm/events/mcc_events.hpp"
+#include "mccinfo/fsm/events/play_events.hpp"
 
 #include <variant>
 

@@ -1,9 +1,9 @@
 #pragma once
 
 #include "state.hpp"
-#include "..\..\utility.hpp"
-#include "..\events\events.hpp"
-#include "..\predicates.hpp"
+#include "mccinfo/utility.hpp"
+#include "mccinfo/fsm/predicates.hpp"
+#include "mccinfo/fsm/events/events.hpp"
 
 namespace mccinfo {
 namespace fsm {

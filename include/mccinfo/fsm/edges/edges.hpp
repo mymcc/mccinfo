@@ -7,8 +7,8 @@
 #include <array>
 #include <ostream>
 
-#include "..\..\utility.hpp"
-#include "..\events\events.hpp"
+#include "mccinfo/utility.hpp"
+#include "mccinfo/fsm/events/events.hpp"
 #include "sequences.hpp"
 
 namespace mccinfo {

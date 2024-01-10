@@ -1,9 +1,8 @@
 #pragma once
 
 #include <boost/sml.hpp>
-
-#include "..\..\query.hpp"
-#include "..\states\mcc_states.hpp"
+#include "mccinfo/query.hpp"
+#include "mccinfo/fsm/states/mcc_states.hpp"
 
 namespace mccinfo {
 namespace fsm {

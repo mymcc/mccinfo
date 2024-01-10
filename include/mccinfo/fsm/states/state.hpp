@@ -2,8 +2,8 @@
 
 #include <ostream>
 #include <memory>
-#include "..\edges\edges.hpp"
-#include "..\events\events.hpp"
+#include "mccinfo/fsm/edges/edges.hpp"
+#include "mccinfo/fsm/events/events.hpp"
 
 namespace mccinfo {
 namespace fsm {
