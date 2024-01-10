@@ -60,7 +60,7 @@ inline auto alive_at_trace_end  = krabs::predicates::opcode_is(static_cast<uint8
 namespace fio {
 
 inline auto file_name           = krabs::predicates::opcode_is(static_cast<uint8_t>(opcodes::fio::file_name));
-inline auto file_name_create    = krabs::predicates::opcode_is(static_cast<uint8_t>(opcodes::fio::file_create));
+inline auto file_name_create    = krabs::predicates::opcode_is(static_cast<uint8_t>(opcodes::fio::file_name_create));
 inline auto file_name_delete    = krabs::predicates::opcode_is(static_cast<uint8_t>(opcodes::fio::file_name_delete));
 inline auto file_name_rundown   = krabs::predicates::opcode_is(static_cast<uint8_t>(opcodes::fio::file_name_rundown));
 inline auto file_create         = krabs::predicates::opcode_is(static_cast<uint8_t>(opcodes::fio::file_create));
@@ -89,7 +89,8 @@ inline auto is_mcc              = krabs::predicates::any_of({ &is_steam_mcc, &is
 inline auto is_temp_carnage_report = krabs::predicates::property_icontains(L"OpenPath", std::string(".xml.tmp"));
 inline auto match_init_file     = krabs::predicates::property_icontains(L"OpenPath", std::string("init.txt"));
 inline auto sound_file          = krabs::predicates::property_icontains(L"OpenPath", std::string(".fsb"));
-inline auto hud_scoring_gfx_file = krabs::predicates::property_icontains(L"OpenPath", std::string("hud_scoring"));
+inline auto hud_scoring_gfx_file = krabs::predicates::property_icontains(L"OpenPath", std::string("hud_scoring.gfx"));
+inline auto restartscreen_gfx_file = krabs::predicates::property_icontains(L"OpenPath", std::string("restartscreen.gfx"));
 inline auto is_main_menu_background_video_file = krabs::predicates::property_icontains(L"OpenPath", std::string("FMS_MainMenu_v2.bk2"));
 inline auto is_sound_file_read = krabs::predicates::property_is(L"IoSize", static_cast<uint32_t>(constants::fsb_fio_read_size));
 inline auto is_pak_file_read = krabs::predicates::property_is(L"IoSize", static_cast<uint32_t>(constants::pak_fio_read_size));
@@ -155,6 +156,11 @@ inline krabs::predicates::all_of hud_scoring_gfx_file_created({
     &fio::file_create
 });
 
+inline krabs::predicates::all_of restartscreen_gfx_file_created({
+    &likely::restartscreen_gfx_file,
+    &fio::file_create
+});
+
 inline krabs::predicates::all_of temp_carnage_report_created({
     &likely::is_temp_carnage_report,
     &fio::file_create
@@ -173,6 +179,7 @@ inline krabs::predicates::any_of file_create_targets({
     &likely::is_main_menu_background_video_file,
     &likely::match_init_file,
     &likely::hud_scoring_gfx_file,
+    &likely::restartscreen_gfx_file,
     &likely::is_temp_carnage_report,
     &likely::sound_file
 });

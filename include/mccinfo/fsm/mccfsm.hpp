@@ -133,8 +133,8 @@ template <class = class Dummy> class controller {
     uint32_t mcc_pid = UINT32_MAX;
     bool hotstart = false;
     bool mcc_on = false;
-    //bool log_full = false;
-    bool log_full = true;
+    bool log_full = false;
+    //bool log_full = true;
 };
 } // namespace fsm
 } // namespace mccinfo

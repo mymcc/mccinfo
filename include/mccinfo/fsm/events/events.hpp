@@ -19,6 +19,7 @@ namespace events {
 		events::load_start,
 		events::match_start,
 		events::match_end,
+		events::unload_end,
 		events::match_found>;
 }
 }
