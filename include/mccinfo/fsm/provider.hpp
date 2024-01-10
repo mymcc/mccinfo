@@ -1,10 +1,8 @@
 #pragma once
 
 #include "mccinfo/query.hpp"
-#include "mccfsm.hpp"
-#include "predicates.hpp"
-#include "filters.hpp"
-#include "fsm/fsm.hpp"
+#include "mccinfo/fsm/mccfsm.hpp"
+#include "mccinfo/fsm/predicates.hpp"
 
 #include <iostream>
 #include <thread>
@@ -29,7 +27,7 @@ void print_fread(const EVENT_RECORD &record, const krabs::trace_context &trace_c
                 std::wcout << L" pid=" << std::to_wstring(record.EventHeader.ProcessId);
                 std::wcout << L" ttid=" << std::to_wstring(ttid);
                 std::wcout << L" IoSize=" << std::to_wstring(io_size);
-                auto pred = krabs::predicates::all_of({&predicates::sound_file_read});
+                auto pred = krabs::predicates::all_of({&predicates::events::sound_file_read});
                 
                 std::wcout << L" Satisfy Predicate=" << pred(record, trace_context);
                 std::wcout << L"\n" << std::flush;
@@ -83,8 +81,9 @@ bool StartETW(void) {
     }
     });
 
-    krabs::event_filter process_filter = filters::make_process_filter();
-    krabs::event_filter fiio_filter = filters::make_fiio_filter();
+    krabs::event_filter process_filter = predicates::filters::make_process_filter();
+    krabs::event_filter fiio_filter = predicates::filters::make_fiio_filter();
+
 
     auto dispatch = [&sm](const EVENT_RECORD &record, const krabs::trace_context &trace_context){
         sm.handle_trace_event(record, trace_context);
@@ -97,9 +96,9 @@ bool StartETW(void) {
     fiio_provider.add_filter(fiio_filter);
     //fiio_provider.add_on_event_callback(print_fread);
 
-    //trace.enable(process_provider);
-    //trace.enable(fiio_provider);
-    trace.enable(il_provider);
+    trace.enable(process_provider);
+    trace.enable(fiio_provider);
+    //trace.enable(il_provider);
 
     std::cout << " - starting trace" << std::endl;
 

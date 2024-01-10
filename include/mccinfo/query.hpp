@@ -70,12 +70,12 @@ std::wostream &operator<<(std::wostream &os, const MCCInstallInfo &ii) {
 
 std::optional<StoreVersion> LookForMCCKind(const std::wstring &install_path) {
     std::filesystem::path path(install_path);
-    std::array<std::wstring_view, 2> exes = {SteamMCCexe, MicrosoftStoreMCCexe};
+    std::array<std::wstring_view, 2> exes = {constants::mcc_steam_exe_w, constants::mcc_msstore_exe_w};
 
     for (const auto &exe : exes) {
-        auto exe_path = (path / MCCexeRelativePath / exe).make_preferred();
+        auto exe_path = (path / constants::mcc_relative_path_to_exe_w / exe).make_preferred();
         if (std::filesystem::exists(exe_path)) {
-            if (exe == SteamMCCexe)
+            if (exe == constants::mcc_steam_exe_w)
                 return StoreVersion::Steam;
             else
                 return StoreVersion::MicrosoftStore;
@@ -89,7 +89,7 @@ std::optional<std::vector<std::wstring>> LookForInstalledGameDLLs(
     std::filesystem::path path(install_path);
     if (std::filesystem::exists(install_path)) {
         std::vector<std::wstring> InstalledGameDLLs;
-        for (const auto &game : GameBasenames) {
+        for (const auto &game : constants::mcc_game_basenames_w) {
             auto dll_path = path / game / (std::wstring(game) + L".dll");
             if (std::filesystem::exists(dll_path)) {
                 InstalledGameDLLs.push_back(dll_path.generic_wstring());
@@ -132,10 +132,10 @@ std::optional<std::wstring> GetFileVersion(const std::wstring &path) {
 
 std::optional<std::wstring> LookForMCCBuildVersion(const std::wstring &install_path) {
     std::filesystem::path path(install_path);
-    std::array<std::wstring_view, 2> exes = {SteamMCCexe, MicrosoftStoreMCCexe};
+    std::array<std::wstring_view, 2> exes = {constants::mcc_steam_exe_w, constants::mcc_msstore_exe_w};
 
     for (const auto &exe : exes) {
-        auto exe_path = (path / MCCexeRelativePath / exe).make_preferred();
+        auto exe_path = (path / constants::mcc_relative_path_to_exe_w / exe).make_preferred();
         if (std::filesystem::exists(exe_path)) {
             auto fv = GetFileVersion(path.generic_wstring());
             if (fv.has_value()) {
@@ -222,7 +222,7 @@ std::optional<std::wstring> LookForMCCInVDF(const std::wstring &vdf) {
             std::filesystem::path folder = libFolder.second->attribs["path"];
             for (const auto &app : libFolder.second->childs) {
                 for (const auto &appid : app.second->attribs) {
-                    if (appid.first.compare(std::to_string(MCCSteamAppID)) == 0) {
+                    if (appid.first.compare(std::to_string(constants::mcc_steam_app_id)) == 0) {
                         return (folder / "steamapps\\common\\Halo The Master Chief Collection")
                             .make_preferred();
                     }
@@ -351,11 +351,11 @@ std::optional<std::wstring> LookForMCCMicrosoftStoreInstallPath(void) {
  * Chief Collection&trade; if one is found; otherwise, an empty optional.
  */
 std::optional<size_t> LookForMCCProcessID(void) {
-    auto windows_pid = utility::GetProcessIDFromName(std::wstring(MicrosoftStoreMCCexe));
+    auto windows_pid = utility::GetProcessIDFromName(std::wstring(constants::mcc_msstore_exe_w));
     if (windows_pid.has_value()) {
         return windows_pid.value();
     }
-    auto steam_pid = utility::GetProcessIDFromName(std::wstring(SteamMCCexe));
+    auto steam_pid = utility::GetProcessIDFromName(std::wstring(constants::mcc_steam_exe_w));
     if (steam_pid.has_value()) {
         return steam_pid.value();
     }
@@ -363,7 +363,7 @@ std::optional<size_t> LookForMCCProcessID(void) {
 }
 
 std::optional<std::wstring> LookForMCCTempPath(void) {
-    auto temp_root = utility::ExpandPath(MCCTempPath);
+    auto temp_root = utility::ExpandPath(constants::mcc_system_temp_path_w);
     if (temp_root.has_value()) {
         return temp_root.value();
     } else {

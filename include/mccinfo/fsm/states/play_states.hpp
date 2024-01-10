@@ -9,10 +9,10 @@ namespace mccinfo {
 namespace fsm {
 namespace states {
 
-MCCFSM_INLINE match_loading = edges::make_sequence(&predicates::init_txt_created);
-MCCFSM_INLINE match_started = edges::make_sequence(&predicates::hud_scoring_created);
-MCCFSM_INLINE match_ended = edges::make_sequence(&predicates::xml_tmp_created);
-MCCFSM_INLINE match_underway = edges::make_sequence(&predicates::sound_file_read);
+MCCFSM_INLINE match_loading = edges::make_sequence(&predicates::events::match_init_file_created);
+MCCFSM_INLINE match_started = edges::make_sequence(&predicates::events::hud_scoring_gfx_file_created);
+MCCFSM_INLINE match_ended = edges::make_sequence(&predicates::events::temp_carnage_report_created);
+MCCFSM_INLINE match_underway = edges::make_sequence(&predicates::events::sound_file_read);
 
 struct in_menus : public state<in_menus>{
 	MCCFSM_STATIC edges = edges::make_edges(

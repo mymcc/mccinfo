@@ -9,12 +9,12 @@ namespace mccinfo {
 namespace fsm {
 namespace states {
 
-MCCFSM_INLINE launcher_started = edges::make_sequence(&predicates::launcher_start_pred);
-MCCFSM_INLINE launcher_found = edges::make_sequence(&predicates::mcc_launcher_found);
-MCCFSM_INLINE mcc_started = edges::make_sequence(&predicates::mcc_process_start);
-MCCFSM_INLINE mcc_found_ = edges::make_sequence(&predicates::mcc_process_found);
-MCCFSM_INLINE main_menu_bg_created = edges::make_sequence(&predicates::main_menu_bg_created);
-MCCFSM_INLINE mcc_lossed = edges::make_sequence(&fsm::predicates::mcc_process_lossed);
+MCCFSM_INLINE launcher_started = edges::make_sequence(&predicates::events::launcher_started);
+MCCFSM_INLINE launcher_found = edges::make_sequence(&predicates::events::launcher_found);
+MCCFSM_INLINE mcc_started = edges::make_sequence(&predicates::events::mcc_started);
+MCCFSM_INLINE mcc_found_ = edges::make_sequence(&predicates::events::mcc_found);
+MCCFSM_INLINE main_menu_bg_video_file_created = edges::make_sequence(&predicates::events::main_menu_background_video_file_created);
+MCCFSM_INLINE mcc_lossed = edges::make_sequence(&fsm::predicates::events::mcc_terminated);
 
 struct off : public state<off> {
     MCCFSM_STATIC edges = edges::make_edges(
@@ -27,7 +27,7 @@ struct off : public state<off> {
 
 struct launching : public state<launching> {
     MCCFSM_STATIC edges = edges::make_edges( 
-        std::make_tuple(&main_menu_bg_created, events::launch_complete{}),
+        std::make_tuple(&main_menu_bg_video_file_created, events::launch_complete{}),
         std::make_tuple(&mcc_lossed, events::launch_abort{})
     );
 };

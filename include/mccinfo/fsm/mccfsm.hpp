@@ -65,7 +65,9 @@ template <class = class Dummy> class controller {
 
         if ((mcc_pid == UINT32_MAX) || (mcc_pid == record.EventHeader.ProcessId)) {
             handle_trace_event_impl<decltype(mcc_sm)>(mcc_sm, record, trace_context);
-            handle_trace_event_impl<decltype(play_sm)>(play_sm, record, trace_context);
+            if (mcc_on) {
+                handle_trace_event_impl<decltype(play_sm)>(play_sm, record, trace_context);
+            }
         }
     }
   private:
@@ -85,6 +87,8 @@ template <class = class Dummy> class controller {
         if (!mcc_on) {
             current_is_off = mcc_sm.is(boost::sml::state<states::off>);
         }
+        bool state_change = false;
+
         auto _evts = sc.pop_event_from_queue();
         while (_evts.has_value()) {
             std::visit(
@@ -92,6 +96,7 @@ template <class = class Dummy> class controller {
                     auto ws = utility::ConvertBytesToWString(std::string(utility::type_hash<decltype(arg)>::name));
                     if (ws.has_value())
                     woss << L"Sending Event: " << ws.value() << L"\n";
+                    state_change = true;
                     sm.process_event(arg);
                 }, _evts.value());
             _evts = sc.pop_event_from_queue();
@@ -118,7 +123,7 @@ template <class = class Dummy> class controller {
             mcc_pid = UINT32_MAX;
             mcc_on = false;
         }
-        if (log_full) std::wcout << woss.str() << std::flush;
+        if (log_full || state_change) std::wcout << woss.str() << std::flush;
     }
   private:
     utility::atomic_mutex lock;
