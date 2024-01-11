@@ -63,5 +63,10 @@ inline constexpr size_t fsb_fio_read_size = 2048;
  * @brief The number of bytes Halo: The Master Chief Collection&trade; reads from its .pak (asset package) at a time during runtime.
  */
 inline constexpr size_t pak_fio_read_size = 65536;
+/**
+ * @brief The number of bytes Halo: The Master Chief Collection&trade; reads from its .pak (asset package) at a time during runtime.
+ */
+inline constexpr size_t bk2_fio_read_size = 131072;
+
 } // namespace mccinfo
 }

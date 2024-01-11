@@ -23,39 +23,57 @@ void print_trace_event(std::wostringstream& woss, const EVENT_RECORD &record,
 
     krabs::schema schema(record, trace_context.schema_locator);
     krabs::parser parser(schema);
+    
+    try {
+        if (schema.event_opcode() != 11) { // Prevent Process_Terminate (Event Version(2))
+            if (schema.event_opcode() != 64) {
+                if (schema.event_opcode() != 67) {
+                    if ((schema.event_opcode() == 3) && ((std::wstring(schema.task_name()).find(L"Process") == std::wstring::npos))) {
 
-    if (schema.event_opcode() != 11) { // Prevent Process_Terminate (Event Version(2))
-        if (schema.event_opcode() != 64) {
-            if (schema.event_opcode() != 67) {
-                std::string imagefilename = parser.parse<std::string>(L"ImageFileName");
-                std::uint32_t pid = parser.parse<std::uint32_t>(L"ProcessId");
-                
-                woss << schema.task_name() << L"_" << schema.opcode_name();
-                woss << L" (" << schema.event_opcode() << L") ";
-                woss << L" ProcessId=" << pid;
-                auto ws = utility::ConvertBytesToWString(imagefilename);
-                if (ws.has_value())
-                    woss << L" ImageFileName=" << ws.value();
+                        std::wstring imagefilename = parser.parse<std::wstring>(L"FileName");
+                        std::uint32_t pid = parser.parse<std::uint32_t>(L"ProcessId");
 
+                        woss << schema.task_name() << L"_" << schema.opcode_name();
+                        woss << L" (" << schema.event_opcode() << L") ";
+                        woss << L" ProcessId=" << pid;
+                        woss << L" ImageFileName=" << imagefilename;
+                        
+                    } else {
+                        std::string imagefilename = parser.parse<std::string>(L"ImageFileName");
+                        std::uint32_t pid = parser.parse<std::uint32_t>(L"ProcessId");
+                        woss << schema.task_name() << L"_" << schema.opcode_name();
+                        woss << L" (" << schema.event_opcode() << L") ";
+                        woss << L" ProcessId=" << pid;
+                        auto ws = utility::ConvertBytesToWString(imagefilename);
+                        if (ws.has_value())
+                            woss << L" ImageFileName=" << ws.value();
+                    }
+                } else {
+                    uint32_t ttid = parser.parse<uint32_t>(L"TTID");
+                    uint32_t io_size = parser.parse<uint32_t>(L"IoSize");
+
+                    woss << schema.task_name() << L"_" << schema.opcode_name();
+                    woss << L" (" << schema.event_opcode() << L") ";
+                    woss << L" pid=" << std::to_wstring(record.EventHeader.ProcessId);
+                    woss << L" ttid=" << std::to_wstring(ttid);
+                    woss << L" IoSize=" << std::to_wstring(io_size);
+                }
             } else {
-                uint32_t ttid = parser.parse<uint32_t>(L"TTID");
-                uint32_t io_size = parser.parse<uint32_t>(L"IoSize");
-                
+                std::wstring imagefilename = parser.parse<std::wstring>(L"OpenPath");
                 woss << schema.task_name() << L"_" << schema.opcode_name();
                 woss << L" (" << schema.event_opcode() << L") ";
-                woss << L" pid=" << std::to_wstring(record.EventHeader.ProcessId);
-                woss << L" ttid=" << std::to_wstring(ttid);
-                woss << L" IoSize=" << std::to_wstring(io_size);
+                woss << " Path=" << imagefilename;
             }
-        } else {
-            std::wstring imagefilename = parser.parse<std::wstring>(L"OpenPath");
-            woss << schema.task_name() << L"_" << schema.opcode_name();
-            woss << L" (" << schema.event_opcode() << L") ";
-            woss << " Path=" << imagefilename;
+            woss << std::endl;
         }
-        woss << std::endl;
+    }
+    catch (const std::exception& exc) {
+        std::cerr << exc.what();
+        throw std::runtime_error("hi :)))))))))))");
     }
 }
+
+
 
 template <class = class Dummy> class controller {
   public:
@@ -63,11 +81,21 @@ template <class = class Dummy> class controller {
                             const krabs::trace_context &trace_context) {
         utility::atomic_guard lk(lock);
 
-        if ((mcc_pid == UINT32_MAX) || (mcc_pid == record.EventHeader.ProcessId)) {
-            handle_trace_event_impl<decltype(mcc_sm)>(mcc_sm, record, trace_context);
-            if (mcc_on) {
-                handle_trace_event_impl<decltype(play_sm)>(play_sm, record, trace_context);
+        bool is_target = (*static_cast<krabs::predicates::details::predicate_base*>(
+                                &predicates::filters::accepted_image_loads))(record, trace_context);
+
+        if ((mcc_pid == UINT32_MAX) || (mcc_pid == record.EventHeader.ProcessId) || is_target) {
+
+            if (is_target) {
+                krabs::schema schema(record, trace_context.schema_locator);
+                krabs::parser parser(schema);
+                std::uint32_t pid = parser.parse<std::uint32_t>(L"ProcessId");
+                if (pid != mcc_pid) return;
             }
+            handle_trace_event_impl<decltype(mcc_sm)>(mcc_sm, record, trace_context);
+            //if (mcc_on) {
+                handle_trace_event_impl<decltype(play_sm)>(play_sm, record, trace_context);
+            //}
         }
     }
   private:
@@ -118,7 +146,7 @@ template <class = class Dummy> class controller {
                 mcc_pid = record.EventHeader.ProcessId;
             }
             mcc_on = true;
-        } 
+        }
         else if (mcc_on && mcc_sm.is(boost::sml::state<states::off>)) {
             mcc_pid = UINT32_MAX;
             mcc_on = false;
@@ -133,8 +161,8 @@ template <class = class Dummy> class controller {
     uint32_t mcc_pid = UINT32_MAX;
     bool hotstart = false;
     bool mcc_on = false;
-    bool log_full = false;
-    //bool log_full = true;
+    //bool log_full = false;
+    bool log_full = true;
 };
 } // namespace fsm
 } // namespace mccinfo

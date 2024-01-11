@@ -20,7 +20,10 @@ namespace events {
 		events::match_start,
 		events::match_end,
 		events::unload_end,
-		events::match_found>;
+		events::in_menus_identified,
+		events::in_menus_not_identified,
+		events::match_found,
+		events::match_paused>;
 }
 }
 }
