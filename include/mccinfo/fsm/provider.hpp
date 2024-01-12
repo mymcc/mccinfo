@@ -11,51 +11,24 @@ namespace mccinfo {
 namespace fsm {
 namespace provider {
 
-void print_fread(const EVENT_RECORD &record, const krabs::trace_context &trace_context) {
-    krabs::schema schema(record, trace_context.schema_locator);
-    krabs::parser parser(schema);
-    auto opcode = schema.event_opcode();
-    if (opcode == 67) {
-        //if (io_size == (uint32_t)2048) {
-        //if (true) {
-        try {
-            if (record.EventHeader.ProcessId == 24340) {
-                uint32_t ttid = parser.parse<uint32_t>(L"TTID");
-                uint32_t io_size = parser.parse<uint32_t>(L"IoSize");
-                std::wcout << schema.task_name() << L"_" << schema.opcode_name();
-                std::wcout << L" (" << schema.event_opcode() << L") ";
-                std::wcout << L" pid=" << std::to_wstring(record.EventHeader.ProcessId);
-                std::wcout << L" ttid=" << std::to_wstring(ttid);
-                std::wcout << L" IoSize=" << std::to_wstring(io_size);
-                auto pred = krabs::predicates::all_of({&predicates::events::sound_file_read});
-                
-                std::wcout << L" Satisfy Predicate=" << pred(record, trace_context);
-                std::wcout << L"\n" << std::flush;
-            }
-        }
-        catch (...) {
-            std::wcout << L"some error occurred?";
-            std::wcout << L"\n" << std::flush;
-        }
-        //}
-    }
-}
 
-void print_rundown(const EVENT_RECORD &record, const krabs::trace_context &trace_context) {
-    std::wcout << std::to_wstring(record.EventHeader.ProcessId) << L'\n' <<std::flush;
-    std::wcout << L"hi\n" << std::flush;
-    //krabs::schema schema(record, trace_context.schema_locator);
-    //krabs::parser parser(schema);
-    //auto opcode = schema.event_opcode();
-    ////if (opcode == 106 || opcode == 107) {
-    //    std::wstring filename = parser.parse<std::wstring>(L"Path");
-    //    //if (filename.find(L"bk") != std::wstring::npos) {
-    //        std::wcout << schema.task_name() << L"_" << schema.opcode_name();
-    //        std::wcout << L" (" << schema.event_opcode() << L") ";
-    //        std::wcout << L" filename=" << filename;
-    //        std::cout << "\n" << std::flush;
-    //    //}
-    ////}
+bool file_has_open_handle(const std::wstring &file) {
+    HANDLE hFile = CreateFileW(file.c_str(),   // name of the write
+                       GENERIC_WRITE,          // open for writing
+                       0,                      // *** do not share ***
+                       NULL,                   // default security
+                       OPEN_EXISTING,          // create new file only
+                       FILE_ATTRIBUTE_NORMAL,  // normal file
+                       NULL);                  // no attr. template
+
+    if ((hFile == INVALID_HANDLE_VALUE) && (GetLastError() == ERROR_SHARING_VIOLATION)) {
+        std::wcout << "sharing violation\n" << std::flush;
+        return true;
+    }
+    else {
+        CloseHandle(hFile);
+        return false;
+    }
 }
 
 bool StartETW(void) {
@@ -64,6 +37,11 @@ bool StartETW(void) {
     fsm::controller<> sm{};
 
     krabs::kernel_trace trace(L"kernel_trace");
+    krabs::user_trace utrace(L"user_trace");
+
+
+
+
     krabs::kernel::process_provider process_provider;
     krabs::kernel::file_init_io_provider fiio_provider;
     krabs::kernel::image_load_provider il_provider;
@@ -94,7 +72,6 @@ bool StartETW(void) {
             }
     }
     });
-
 
     krabs::event_filter process_filter = predicates::filters::make_process_filter();
     krabs::event_filter fiio_filter = predicates::filters::make_fiio_filter();
@@ -139,6 +116,10 @@ bool StartETW(void) {
     trace.enable(il_provider);
 
     std::cout << " - starting trace" << std::endl;
+
+    std::wstring target(L"F:\\SteamLibrary\\steamapps\\common\\Halo The Master Chief "
+                           "Collection\\halo2\\halo2.dll");
+    std::wcout << file_has_open_handle(target) << L" : " << target << L'\n' << std::flush;
     
     std::thread thread([&trace]() { trace.start(); });
 

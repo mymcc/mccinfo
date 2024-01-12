@@ -20,8 +20,8 @@ namespace fsm {
 namespace predicates {
 namespace opcodes {
 
-// https://learn.microsoft.com/en-us/windows/win32/etw/process-typegroup1
 enum class process : uint8_t {
+// https://learn.microsoft.com/en-us/windows/win32/etw/process-typegroup1
     start = 1,
     end = 2,
     dc_start = 3,
@@ -43,12 +43,22 @@ enum class fio : uint8_t {
     file_write = 68,
 };
 
-// https://learn.microsoft.com/en-us/windows/win32/etw/image-load
 enum class image : uint8_t {
+// https://learn.microsoft.com/en-us/windows/win32/etw/image-load
     load = 10,
     unload = 2,
     dc_start = 3,
     dc_end = 4,
+};
+
+enum class handle : uint8_t {
+    create = 32,
+    close = 33,
+    type_dc_start = 36,
+    type_dc_end = 37,
+    dc_start = 38,
+    dc_end = 39,
+
 };
 
 } // opcodes
@@ -83,6 +93,16 @@ inline auto loaded_at_trace_end   = krabs::predicates::opcode_is(static_cast<uin
 
 } // image
 
+namespace handle {
+
+inline auto create                   = krabs::predicates::opcode_is(static_cast<uint8_t>(opcodes::handle::create));
+inline auto close                    = krabs::predicates::opcode_is(static_cast<uint8_t>(opcodes::handle::close));
+inline auto type_open_at_trace_start = krabs::predicates::opcode_is(static_cast<uint8_t>(opcodes::handle::type_dc_start));
+inline auto type_open_at_trace_end   = krabs::predicates::opcode_is(static_cast<uint8_t>(opcodes::handle::type_dc_end));
+inline auto open_at_trace_start      = krabs::predicates::opcode_is(static_cast<uint8_t>(opcodes::handle::dc_start));
+inline auto open_at_trace_end        = krabs::predicates::opcode_is(static_cast<uint8_t>(opcodes::handle::dc_end));
+
+} // handle
 namespace likely_is {
 
 inline auto launcher         = krabs::predicates::property_is(L"ImageFileName", std::string(constants::launcher_exe));
@@ -286,6 +306,19 @@ inline constexpr auto make_image_filter = []() {
         krabs::predicates::all_of({
             &accepted_image_loads
             //&image_load_targets
+        })
+    };
+};
+
+inline constexpr auto make_handle_filter = []() {
+    return krabs::event_filter{
+        krabs::predicates::any_of({
+            //&handle::create,
+            //&handle::close,
+            //&handle::type_open_at_trace_start,
+            //&handle::type_open_at_trace_end,
+            &handle::open_at_trace_start,
+            &handle::open_at_trace_end
         })
     };
 };
