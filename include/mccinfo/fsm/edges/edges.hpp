@@ -22,40 +22,40 @@ enum class priority {
 class edge {
     public:
         constexpr edge(details::sequence_base* seq, events::event_t evt)
-             : _edge(seq, evt) {}
+             : edge_(seq, evt) {}
 
         template <typename _Sm> 
         void traverse(_Sm *sm) const {
             std::visit([](auto &&evt) {
                 auto new_evt = evt;
                 sm->process_event(new_evt); 
-            }, _edge.second);
+            }, edge_.second);
         }
         
         priority get_priority() const {
-            return _prio;
+            return prio_;
         }
 
         events::event_t get_event() const {
-            return _edge.second;
+            return edge_.second;
         }
 
         virtual bool handle_trace_event(std::wostringstream& woss,
                                         const EVENT_RECORD &record,
                                         const krabs::trace_context &trace_context) {
-            bool result = _edge.first->try_advance(record, trace_context);
+            bool result = edge_.first->try_advance(record, trace_context);
             woss << L"Sequence Result: " << ((result) ? L"advanced" : L"nil") << L'\n';
-            return _edge.first->is_complete();
+            return edge_.first->is_complete();
         }
 
         void reset() {
-            _edge.first->reset();
+            edge_.first->reset();
         }
 
 
     private:
-        priority _prio{ priority::weak };
-        std::pair<details::sequence_base*, events::event_t> _edge;
+        priority prio_{ priority::weak };
+        std::pair<details::sequence_base*, events::event_t> edge_;
 };
 
 
@@ -69,15 +69,15 @@ struct edge_container_base {
 template <size_t N>
 struct edge_container : public edge_container_base {
     template <typename... _Edges> 
-	constexpr edge_container(_Edges... edges) : _edges{edges...} {
+	constexpr edge_container(_Edges... edges) : edges_{edges...} {
     static_assert(sizeof...(edges) == N,
                     "The number of edges must match the template parameter N.");
 	}
 
     virtual void reset() override
     {
-        for (auto &_edge : _edges) {
-            _edge.reset();
+        for (auto &edge_ : edges_) {
+            edge_.reset();
         }
     }
 
@@ -85,9 +85,9 @@ struct edge_container : public edge_container_base {
                        const krabs::trace_context &trace_context) override final {        
         std::vector<std::pair<edges::priority, events::event_t>> hot_events;
 
-        for (auto &_edge : _edges) {
-            if (_edge.handle_trace_event(woss, record, trace_context)) {
-                hot_events.push_back({_edge.get_priority(), _edge.get_event()});
+        for (auto &edge_ : edges_) {
+            if (edge_.handle_trace_event(woss, record, trace_context)) {
+                hot_events.push_back({edge_.get_priority(), edge_.get_event()});
             }
         }
         if (hot_events.size()) {
@@ -99,7 +99,7 @@ struct edge_container : public edge_container_base {
     }
 
   private:
-    std::array<edge, N> _edges;
+    std::array<edge, N> edges_;
 };
 
 template <typename... Tuples>

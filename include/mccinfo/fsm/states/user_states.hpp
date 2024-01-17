@@ -61,13 +61,6 @@ struct identifying_session : public state<identifying_session> {
     );
 };
 
-struct identifying_match_state : public state<identifying_match_state> {
-    MCCFSM_STATIC edges = edges::make_edges(
-        std::make_tuple(&match_paused_, events::match_paused{}),
-        std::make_tuple(&mcc_lossed_, events::mcc_terminate{})
-    );
-};
-
 struct in_menus : public state<in_menus>{
 	MCCFSM_STATIC edges = edges::make_edges(
         std::make_tuple(&match_loading, events::load_start{}),

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "mccinfo/fsm/events/mcc_events.hpp"
-#include "mccinfo/fsm/events/play_events.hpp"
+#include "mccinfo/fsm/events/user_events.hpp"
 
 #include <variant>
 
@@ -21,7 +21,6 @@ namespace events {
 		events::match_end,
 		events::unload_end,
 		events::in_menus_identified,
-		events::in_menus_not_identified,
 		events::match_found,
 		events::match_paused>;
 }

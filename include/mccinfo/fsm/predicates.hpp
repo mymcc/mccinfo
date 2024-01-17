@@ -132,6 +132,14 @@ inline auto wininet_image = krabs::predicates::property_icontains(L"FileName", s
 inline auto winrnr_image = krabs::predicates::property_icontains(L"FileName", std::string("winrnr.dll"));
 inline auto wsock32_image = krabs::predicates::property_icontains(L"FileName", std::string("wsock32.dll"));
 
+inline auto halo1_image = krabs::predicates::property_icontains(L"FileName", std::string("halo1.dll"));
+inline auto halo2_image = krabs::predicates::property_icontains(L"FileName", std::string("halo2.dll"));
+inline auto halo3_image = krabs::predicates::property_icontains(L"FileName", std::string("halo3.dll"));
+inline auto halo3_odst_image = krabs::predicates::property_icontains(L"FileName", std::string("halo3odst.dll"));
+inline auto halo4_image = krabs::predicates::property_icontains(L"FileName", std::string("halo4.dll"));
+inline auto halo_reach_image = krabs::predicates::property_icontains(L"FileName", std::string("haloreach.dll"));
+inline auto groundhog_image = krabs::predicates::property_icontains(L"FileName", std::string("groundhog.dll"));
+
 } // likely_is
 
 namespace certainly_not {
@@ -274,7 +282,14 @@ inline krabs::predicates::any_of image_load_targets({
     &likely_is::wininet_image,
     &likely_is::wsock32_image,
     &likely_is::cryptui_image,
-    &likely_is::winrnr_image
+    &likely_is::winrnr_image,
+    &likely_is::halo1_image,
+    &likely_is::halo2_image,
+    &likely_is::halo3_image,
+    &likely_is::halo3_odst_image,
+    &likely_is::halo4_image,
+    &likely_is::halo_reach_image,
+    &likely_is::groundhog_image,
 });
 
 inline krabs::predicates::all_of accepted_image_loads({
@@ -303,10 +318,7 @@ inline constexpr auto make_fiio_filter = []() {
 
 inline constexpr auto make_image_filter = []() {
     return krabs::event_filter{
-        krabs::predicates::all_of({
-            &accepted_image_loads
-            //&image_load_targets
-        })
+        krabs::predicates::no_event
     };
 };
 

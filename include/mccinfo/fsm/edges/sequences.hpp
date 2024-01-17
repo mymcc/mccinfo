@@ -23,18 +23,18 @@ struct sequence_base {
 
 template <std::size_t N> struct sequence : public sequence_base {
   public:
-    template <typename... predicates> constexpr sequence(predicates... preds) : _seq{preds...} {
+    template <typename... predicates> constexpr sequence(predicates... preds) : seq_{preds...} {
         static_assert(sizeof...(preds) == N,
                       "The number of predicates must match the template parameter N.");
     }
 
-    sequence(const sequence &other) : current(0), _seq(other._seq) {
+    sequence(const sequence &other) : current_(0), seq_(other.seq_) {
     }
 
     sequence &operator=(const sequence &other) {
         if (this != &other) {
-            current = 0;
-            _seq = other._seq;
+            current_ = 0;
+            seq_ = other.seq_;
         }
         return *this;
     }
@@ -45,8 +45,8 @@ template <std::size_t N> struct sequence : public sequence_base {
     virtual bool try_advance(const EVENT_RECORD &record,
                              const krabs::trace_context &trace_context) const override {
         if (!is_complete()) {
-            if ((*_seq[current])(record, trace_context)) {
-                current += 1;
+            if ((*seq_[current_])(record, trace_context)) {
+                current_ += 1;
                 return true;
             }
         }
@@ -54,16 +54,16 @@ template <std::size_t N> struct sequence : public sequence_base {
     }
 
     virtual bool is_complete() const override {
-        return current == N;
+        return current_ == N;
     }
 
     virtual void reset() override {
-        current = 0;
+        current_ = 0;
     }
 
   private:
-    mutable size_t current{0};
-    std::array<krabs::predicates::details::predicate_base *, N> _seq;
+    mutable size_t current_{0};
+    std::array<krabs::predicates::details::predicate_base *, N> seq_;
 };
 template <typename... predicates> sequence(predicates...) -> sequence<sizeof...(predicates)>;
 
