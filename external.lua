@@ -9,10 +9,13 @@ IncludeDir["lockfree"] = "../external/lockfree"
 IncludeDir["sml"] = "../external/sml/include"
 IncludeDir["cometa"] = "../external/cometa/include"
 IncludeDir["frozen"] = "../external/frozen/include"
+IncludeDir["imgui"]  = "../external/imgui"
+IncludeDir["GLEW"] = "../external/glew/include"
 LibraryDir = {}
 
 group "external"
-   --include "external/imgui"
+   include "external/imgui"
+   include "external/GLEW"
 group ""
 
 group "tests"
@@ -21,4 +24,5 @@ group ""
 
 group "core"
    include "include/"
+   include "src/"
 group ""

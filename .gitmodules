@@ -22,3 +22,10 @@
 [submodule "external/frozen"]
 	path = external/frozen
 	url = https://github.com/serge-sans-paille/frozen
+[submodule "external/glew"]
+	path = external/glew
+	url = https://github.com/Stehfyn/glew
+[submodule "external/imgui"]
+	path = external/imgui
+	url = https://github.com/ocornut/imgui/
+	branch = docking
