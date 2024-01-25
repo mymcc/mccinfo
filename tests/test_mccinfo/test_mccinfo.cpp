@@ -28,7 +28,28 @@ int main(int argc, char **argv) {
         std::wcout << std::left << std::setw(align) << L"MCC PID: " << L"NO PID FOUND" << std::endl;
     }
 
-    mccinfo::fsm::provider::StartETW();
+    using namespace mccinfo::fsm;
+
+    callback_table cb_table{};
+
+    cb_table.add_callback(ON_STATE_ENTRY | OFF,
+                          [] { std::wcout << L"OFF STATE ENTERED!" << std::endl; }
+    );
+
+    context ctx(cb_table);
+
+    std::wcout << L" - starting trace" << std::endl;
+    ctx.start();
+
+    while (true) {
+        std::string input;
+        std::getline(std::cin, input);
+        if (input == "q") {
+            std::wcout << std::endl << L" - stopping trace" << std::endl;
+            ctx.stop();
+            break;
+        }
+    }
 
     return 0;
 }

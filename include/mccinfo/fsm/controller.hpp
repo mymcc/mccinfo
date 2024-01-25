@@ -92,18 +92,14 @@ void print_trace_event(std::wostringstream& woss, const EVENT_RECORD &record,
     }
 }
 
-
-struct controller_context {
-
-
-private:
-    bool needs_id_ = false;
-    size_t mcc_pid_ = SIZE_MAX;
-    states::state_context sc_{};
-};
-
 template <class = class Dummy> class controller {
   public:
+    
+    controller(callback_table& cbtable)
+        : mcc_sm{cbtable},
+        user_sm{cbtable}
+    {};
+
     void handle_trace_event(const EVENT_RECORD &record,
                             const krabs::trace_context &trace_context) {
         utility::atomic_guard lk(lock);
@@ -121,7 +117,7 @@ template <class = class Dummy> class controller {
             }
 
             handle_trace_event_impl<decltype(mcc_sm)>(mcc_sm, record, trace_context);
-            handle_trace_event_impl<decltype(play_sm)>(play_sm, record, trace_context);
+            handle_trace_event_impl<decltype(user_sm)>(user_sm, record, trace_context);
         }
     }
   private:
@@ -178,7 +174,7 @@ template <class = class Dummy> class controller {
             mcc_on = false;
         }
 
-        if (play_sm.is(boost::sml::state<states::identifying_session>) && (!done_identification)) {
+        if (user_sm.is(boost::sml::state<states::identifying_session>) && (!done_identification)) {
             using namespace constants::background_videos;
 
             auto video_basenames = menu::get_w(menu::video_keys::ALL);
@@ -211,14 +207,17 @@ template <class = class Dummy> class controller {
     }
   private:
     utility::atomic_mutex lock;
-    boost::sml::sm<machines::mcc> mcc_sm;
-    boost::sml::sm<machines::user> play_sm;
+
     states::state_context sc{};
+    boost::sml::sm<machines::mcc> mcc_sm;
+    boost::sml::sm<machines::user> user_sm;
+
+
+  private: // filtering
     uint32_t mcc_pid = UINT32_MAX;
     bool mcc_on = false;
     //bool log_full = false;
     bool log_full = true;
-
     bool done_identification = false;
 };
 } // namespace fsm

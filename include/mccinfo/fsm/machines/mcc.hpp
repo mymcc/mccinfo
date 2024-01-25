@@ -3,6 +3,7 @@
 #include <boost/sml.hpp>
 #include "mccinfo/query.hpp"
 #include "mccinfo/fsm/states/mcc_states.hpp"
+#include "mccinfo/fsm/callback_table.hpp"
 
 namespace mccinfo {
 namespace fsm {
@@ -23,7 +24,11 @@ struct mcc {
         boost::sml::state<launching> + event<launch_abort> = boost::sml::state<off>,
         boost::sml::state<on> + event<mcc_terminate> = boost::sml::state<off>,
 
-        boost::sml::state<off> + boost::sml::on_entry<_> / [] { std::cout << "off\n" << std::flush; },
+        boost::sml::state<off> + boost::sml::on_entry<_> /
+                                     [](callback_table& cbtable) {
+                                         std::cout << "off\n" << std::flush;
+                                         cbtable.execute_callback(ON_STATE_ENTRY | OFF);
+                                     },
         boost::sml::state<launching> + boost::sml::on_entry<_> / [] { std::cout << "launching\n" << std::flush; },
         boost::sml::state<on> + boost::sml::on_entry<_> / [] { std::cout << "on\n" << std::flush; }
     );

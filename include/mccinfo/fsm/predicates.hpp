@@ -316,7 +316,7 @@ inline constexpr auto make_fiio_filter = []() {
     };
 };
 
-inline constexpr auto make_image_filter = []() {
+inline constexpr auto make_dummy_image_filter = []() {
     return krabs::event_filter{
         krabs::predicates::no_event
     };

@@ -1,16 +1,14 @@
 #pragma once
 
 #include "mccinfo/query.hpp"
-#include "mccinfo/fsm/mccfsm.hpp"
+#include "mccinfo/fsm/controller.hpp"
 #include "mccinfo/fsm/predicates.hpp"
 #include "lockfree/lockfree.hpp"
 #include <iostream>
 #include <thread>
-#include <condition_variable>
 
 namespace mccinfo {
 namespace fsm {
-namespace provider {
 
 class event_dispatcher {
   public:
@@ -66,87 +64,88 @@ class event_dispatcher {
     std::thread dispatch_thread_;
 };
 
-bool StartETW(void) {
-    using namespace boost::sml;
-    
-    fsm::controller<> sm{};
-    event_dispatcher dispatcher{};
+namespace details {
 
-    krabs::kernel_trace trace(L"kernel_trace");
-    
-    krabs::kernel::process_provider process_provider;
-    krabs::kernel::file_init_io_provider fiio_provider;
-    krabs::kernel::image_load_provider il_provider;
+inline bool concrete_image_filter(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+    return (*static_cast<krabs::predicates::details::predicate_base *>(
+        &predicates::filters::accepted_image_loads))(record, trace_context);
+}
 
-    il_provider.add_on_event_callback([&sm, &dispatcher](const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
-        krabs::schema schema(record, trace_context.schema_locator);
-        krabs::parser parser(schema);
-        
-        bool is_target = (*static_cast<krabs::predicates::details::predicate_base*>(
-                                &predicates::filters::accepted_image_loads))(record, trace_context);
-        if (is_target) {
-            //dispatcher.set_trace_context(&trace_context);
-            //dispatcher.enqueue(record);
-            sm.handle_trace_event(record, trace_context);
-        }
-    });
-    
-    krabs::event_filter process_filter = predicates::filters::make_process_filter();
-    krabs::event_filter fiio_filter = predicates::filters::make_fiio_filter();
-    krabs::event_filter il_filter = predicates::filters::make_image_filter();
+} // details
 
-    auto dispatch = [&sm, &dispatcher](const EVENT_RECORD &record, const krabs::trace_context &trace_context){
-        try {
-            //dispatcher.set_trace_context(&trace_context);
-            //dispatcher.enqueue(record);
-            sm.handle_trace_event(record, trace_context);
-        }
-        catch (const std::exception& exc) {
-            std::cerr << exc.what();
-            throw std::runtime_error("dispatch error");
-        }
-    };
+class event_provider {
+  public:
+    event_provider() : 
+        trace_(L"mccinfo_kernel_trace") {
 
-    auto dummy = [](const EVENT_RECORD &record, const krabs::trace_context &trace_context) {
-        int x;
-        (void*)x;
-    };
-
-
-    process_filter.add_on_event_callback(dispatch);
-    fiio_filter.add_on_event_callback(dispatch);
-    il_filter.add_on_event_callback(dummy);
-
-    process_provider.add_filter(process_filter);
-    fiio_provider.add_filter(fiio_filter);
-    il_provider.add_filter(il_filter);
-
-    trace.enable(process_provider);
-    trace.enable(fiio_provider);
-    trace.enable(il_provider);
-
-    std::cout << " - starting trace" << std::endl;
-    
-    std::thread thread([&trace, &dispatcher, &sm]() {
-        //dispatcher.start(sm);
-        trace.start();
-    });
-
-    while (true) {
-        std::string input;
-        std::getline(std::cin, input);
-        if (input == "q") {
-            std::cout << std::endl << " - stopping trace" << std::endl;
-            trace.stop();
-            //dispatcher.stop();
-            break;
-        }
     }
 
-    thread.join();
+    // TODO Figure a way around the static stuff here (another state machine)
+    template <typename T>
+    void enable_dispatch_to(T* sm) {
+        static krabs::event_filter process_filter = predicates::filters::make_process_filter();
+        static krabs::event_filter fiio_filter = predicates::filters::make_fiio_filter();
+        static krabs::event_filter il_filter = predicates::filters::make_dummy_image_filter();
 
-    return true;
-}
-} // namespace provider
+        static auto dispatch_event = 
+            [=] (const EVENT_RECORD &record, const krabs::trace_context &trace_context) {
+                try {
+                    sm->handle_trace_event(record, trace_context);
+                }
+                catch (std::exception& e) {
+                    std::cerr << e.what() << std::endl;
+                }
+            };
+
+        static auto dispatch_image_event =
+            [=](const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+                try {
+                    if (details::concrete_image_filter(record, trace_context)) {
+                        sm->handle_trace_event(record, trace_context);
+                    }
+                }
+                catch (std::exception& e) {
+                        std::cerr << e.what() << std::endl;
+                }
+            };
+
+        il_provider_.add_on_event_callback(dispatch_image_event);
+
+        static auto dummy = 
+            [](const EVENT_RECORD &record, const krabs::trace_context &trace_context) {
+                int x;
+                (void*)x;
+            };
+
+        process_filter.add_on_event_callback(dispatch_event);
+        fiio_filter.add_on_event_callback(dispatch_event);
+        il_filter.add_on_event_callback(dummy);
+
+        process_provider_.add_filter(process_filter);
+        fiio_provider_.add_filter(fiio_filter);
+        il_provider_.add_filter(il_filter);
+
+        trace_.enable(process_provider_);
+        trace_.enable(fiio_provider_);
+        trace_.enable(il_provider_);
+
+    }
+    void start() {
+        trace_.start();
+    }
+    void stop() {
+        trace_.stop();
+    }
+
+  private:
+    void set_filters() {}
+
+  private:
+    krabs::kernel_trace trace_;
+    krabs::kernel::process_provider process_provider_;
+    krabs::kernel::file_init_io_provider fiio_provider_;
+    krabs::kernel::image_load_provider il_provider_;
+};
+
 } // namespace fsm
 } // namespace mccinfo
