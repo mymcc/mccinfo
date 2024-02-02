@@ -140,7 +140,7 @@ template <typename T> struct type_hash {
 
 template <typename evt> static constexpr auto id = utility::type_hash<evt>::hash;
 
-std::optional<std::wstring> ConvertBytesToWString(const std::string &bytes) {
+inline std::optional<std::wstring> ConvertBytesToWString(const std::string &bytes) {
     int required_size =
         MultiByteToWideChar(CP_UTF8, 0, bytes.data(), static_cast<int>(bytes.size()), nullptr, 0);
     if (required_size == 0)
@@ -155,7 +155,7 @@ std::optional<std::wstring> ConvertBytesToWString(const std::string &bytes) {
     return result;
 }
 
-std::optional<std::string> ConvertWStringToBytes(const std::wstring &wstr) {
+inline std::optional<std::string> ConvertWStringToBytes(const std::wstring &wstr) {
     int required_size = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), static_cast<int>(wstr.size()),
                                             nullptr, 0, nullptr, nullptr);
     if (required_size == 0)

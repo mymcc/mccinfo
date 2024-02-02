@@ -26,8 +26,16 @@ enum state_flags : uint64_t {
     IDENTIFYING_SESSION = BITFLAG(7),
     IN_MENUS            = BITFLAG(8),
     LOADING_IN          = BITFLAG(9),
-    IN_MATCH            = BITFLAG(10),
+    IN_GAME             = BITFLAG(10),
     LOADING_OUT         = BITFLAG(11),
+    NONE                = BITFLAG(12),
+    HALOCE              = BITFLAG(13),
+    HALO2               = BITFLAG(14),
+    HALO2A              = BITFLAG(15),
+    HALO3               = BITFLAG(16),
+    HALO3ODST           = BITFLAG(17),
+    HALO4               = BITFLAG(18),
+    HALOREACH           = BITFLAG(19),
 };
 
 
@@ -47,7 +55,7 @@ class callback_table {
     void add_callback(uint64_t flags, std::function<void()> cb) {
         
         // on_state_entry
-        for (size_t i = 2; i < 12; ++i) {
+        for (size_t i = 2; i < 20; ++i) {
             uint64_t key = flags & (ON_STATE_ENTRY | BITFLAG(i));
             if (auto it = table_.find(key); it != table_.end()) {
                 it->second.emplace_back(cb);
@@ -55,7 +63,7 @@ class callback_table {
         }
 
         // on_state_exit
-        for (size_t i = 2; i < 12; ++i) {
+        for (size_t i = 2; i < 20; ++i) {
             uint64_t key = flags & (ON_STATE_EXIT | BITFLAG(i));
             if (auto it = table_.find(key); it != table_.end()) {
                 it->second.emplace_back(cb);
@@ -73,8 +81,16 @@ class callback_table {
         {ON_STATE_ENTRY | WAITING_ON_LAUNCH, {}},
         {ON_STATE_ENTRY | IN_MENUS, {}},
         {ON_STATE_ENTRY | LOADING_IN, {}},
-        {ON_STATE_ENTRY | IN_MATCH, {}},
+        {ON_STATE_ENTRY | IN_GAME, {}},
         {ON_STATE_ENTRY | LOADING_OUT, {}},
+        {ON_STATE_ENTRY | NONE, {}},
+        {ON_STATE_ENTRY | HALOCE, {}},
+        {ON_STATE_ENTRY | HALO2, {}},
+        {ON_STATE_ENTRY | HALO2A, {}},
+        {ON_STATE_ENTRY | HALO3, {}},
+        {ON_STATE_ENTRY | HALO3ODST, {}},
+        {ON_STATE_ENTRY | HALO4, {}},
+        {ON_STATE_ENTRY | HALOREACH, {}},
 
         {ON_STATE_EXIT | OFF, {}},
         {ON_STATE_EXIT | LAUNCHING, {}},
@@ -83,8 +99,16 @@ class callback_table {
         {ON_STATE_EXIT | WAITING_ON_LAUNCH, {}},
         {ON_STATE_EXIT | IN_MENUS, {}},
         {ON_STATE_EXIT | LOADING_IN, {}},
-        {ON_STATE_EXIT | IN_MATCH, {}},
-        {ON_STATE_EXIT | LOADING_OUT, {}}
+        {ON_STATE_EXIT | IN_GAME, {}},
+        {ON_STATE_EXIT | LOADING_OUT, {}},
+        {ON_STATE_EXIT | NONE, {}},
+        {ON_STATE_EXIT | HALOCE, {}},
+        {ON_STATE_EXIT | HALO2, {}},
+        {ON_STATE_EXIT | HALO2A, {}},
+        {ON_STATE_EXIT | HALO3, {}},
+        {ON_STATE_EXIT | HALO3ODST, {}},
+        {ON_STATE_EXIT | HALO4, {}},
+        {ON_STATE_EXIT | HALOREACH, {}}
     };
 };
 

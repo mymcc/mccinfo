@@ -12,6 +12,6 @@ struct mcc_start {};
 struct mcc_terminate{};
 struct mcc_found{};
 
-} //namespace events
+} // namespace events
 } // namespace fsm
 } // namespace mccinfo

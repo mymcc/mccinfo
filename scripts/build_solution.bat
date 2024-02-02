@@ -14,6 +14,11 @@ if not "%1" == "" (
     set vs_version=%1
 )
 
+if not exist external\imgui\premake5.lua (
+    copy external\premake\external\imgui\imgui.lua external\imgui
+    rename external\imgui\imgui.lua premake5.lua
+)
+
 echo Building Visual Studio Solution files for %vs_version% ...
 
 external\premake\premake5.exe %vs_version% | for /f "tokens=* delims=" %%i in ('more') do @(

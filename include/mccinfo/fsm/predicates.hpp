@@ -111,20 +111,48 @@ inline auto steam_mcc        = krabs::predicates::property_is(L"ImageFileName", 
 inline auto msstore_mcc      = krabs::predicates::property_is(L"ImageFileName", std::string(constants::mcc_msstore_exe));
 inline auto mcc              = krabs::predicates::any_of({ &steam_mcc, &msstore_mcc});
 
+
+inline auto theater_file = krabs::predicates::property_icontains(L"OpenPath", std::string(".mov"));
 inline auto temp_carnage_report = krabs::predicates::property_icontains(L"OpenPath", std::string(".xml.tmp"));
 inline auto match_init_file     = krabs::predicates::property_icontains(L"OpenPath", std::string("init.txt"));
+inline auto match_launch_file   = krabs::predicates::property_icontains(L"OpenPath", std::string("launch.txt"));
 inline auto sound_file          = krabs::predicates::property_icontains(L"OpenPath", std::string(".fsb"));
 inline auto hud_scoring_gfx_file = krabs::predicates::property_icontains(L"OpenPath", std::string("hud_scoring.gfx"));
+inline auto loadingscreen_gfx_file = krabs::predicates::property_icontains(L"OpenPath", std::string("loadingscreen.gfx"));
 inline auto restartscreen_gfx_file = krabs::predicates::property_icontains(L"OpenPath", std::string("restartscreen.gfx"));
 inline auto paused_game_gfx_file = krabs::predicates::property_icontains(L"OpenPath", std::string("multiplayerpausedgame.gfx"));
+inline auto soundstream_pck_file = krabs::predicates::property_icontains(L"OpenPath", std::string("soundstream.pck"));
+inline auto match_temp_file = krabs::predicates::property_icontains(L"OpenPath", std::string(".temp"));
+
+inline auto halo2a_autosave_temp_file = krabs::predicates::property_icontains(L"OpenPath", std::string("MCC\\Temporary\\Halo2A\\autosave"));
+inline auto halo3_autosave_temp_file = krabs::predicates::property_icontains(L"OpenPath", std::string("MCC\\Temporary\\Halo3\\autosave"));
+inline auto halo3odst_autosave_temp_file = krabs::predicates::property_icontains(L"OpenPath", std::string("MCC\\Temporary\\Halo3ODST\\autosave"));
+inline auto halo4_autosave_temp_file = krabs::predicates::property_icontains(L"OpenPath", std::string("MCC\\Temporary\\Halo4\\autosave"));
+inline auto haloreach_autosave_temp_file = krabs::predicates::property_icontains(L"OpenPath", std::string("MCC\\Temporary\\HaloReach\\autosave"));
+
+inline auto halo2_autosave_bin_file = krabs::predicates::property_icontains(L"OpenPath", std::string("MCC\\Config\\autosave_Halo2.bin"));
+inline auto halo3_autosave_bin_file = krabs::predicates::property_icontains(L"OpenPath", std::string("MCC\\Config\\autosave_Halo3.bin"));
+
+inline auto haloce_lang_bin = krabs::predicates::property_icontains(L"OpenPath", std::string("_Halo1.bin"));
+inline auto halo2_lang_bin = krabs::predicates::property_icontains(L"OpenPath", std::string("_Halo2.bin"));
+inline auto halo2a_lang_bin = krabs::predicates::property_icontains(L"OpenPath", std::string("_Halo2A.bin"));
+inline auto halo3_lang_bin = krabs::predicates::property_icontains(L"OpenPath", std::string("_Halo3.bin"));
+inline auto halo3odst_lang_bin = krabs::predicates::property_icontains(L"OpenPath", std::string("_Halo3ODST.bin"));
+inline auto halo4_lang_bin = krabs::predicates::property_icontains(L"OpenPath", std::string("_Halo4.bin"));
+inline auto haloreach_lang_bin = krabs::predicates::property_icontains(L"OpenPath", std::string("_HaloReach.bin"));
+
 
 inline auto main_menu_background_video_file = krabs::predicates::property_icontains(L"OpenPath", std::string("FMS_MainMenu_v2.bk2"));
-// we want the bg video file that is not the
 inline auto ms_logo_background_video_file = krabs::predicates::property_icontains(L"OpenPath", std::string("FMS_logo_microsoft_7_1_.bk2"));
+
+
 inline auto background_video_file = krabs::predicates::property_icontains(L"OpenPath", std::string(".bk2"));
 inline auto sound_file_read = krabs::predicates::property_is(L"IoSize", static_cast<uint32_t>(constants::fsb_fio_read_size));
+inline auto halo1_initial_sound_file_read = krabs::predicates::property_is(L"IoSize", static_cast<uint32_t>(constants::halo1_initial_fsb_read_size));
+
 inline auto pak_file_read = krabs::predicates::property_is(L"IoSize", static_cast<uint32_t>(constants::pak_fio_read_size));
 inline auto bk2_file_read = krabs::predicates::property_is(L"IoSize", static_cast<uint32_t>(constants::bk2_fio_read_size));
+inline auto font_package_file_read = krabs::predicates::property_is(L"IoSize", static_cast<uint32_t>(constants::font_package_read_size));
 
 inline auto launcher_image = krabs::predicates::property_icontains(L"FileName", std::string(constants::launcher_exe));
 inline auto cryptui_image = krabs::predicates::property_icontains(L"FileName", std::string("cryptui.dll"));
@@ -141,6 +169,19 @@ inline auto halo_reach_image = krabs::predicates::property_icontains(L"FileName"
 inline auto groundhog_image = krabs::predicates::property_icontains(L"FileName", std::string("groundhog.dll"));
 
 } // likely_is
+
+namespace contains {
+    inline auto halo1 = krabs::predicates::property_icontains(L"OpenPath", std::string("halo1"));
+    inline auto halo2 = krabs::predicates::property_icontains(L"OpenPath", std::string("halo2"));
+    inline auto mpcarnagereport = krabs::predicates::property_icontains(L"OpenPath", std::string("mpcarnagereport"));
+    inline auto survivalcarnagereport = krabs::predicates::property_icontains(L"OpenPath", std::string("survivalcarnagereport"));
+    inline auto h2a_movie_path = krabs::predicates::property_icontains(L"OpenPath", std::string("MCC\\Temporary\\UserContent\\Halo2A\\Movie"));
+    inline auto h3_movie_path = krabs::predicates::property_icontains(L"OpenPath", std::string("MCC\\Temporary\\UserContent\\Halo3\\Movie"));
+    inline auto h3odst_movie_path = krabs::predicates::property_icontains(L"OpenPath", std::string("MCC\\Temporary\\UserContent\\Halo3ODST\\Movie"));
+    inline auto h4_movie_path = krabs::predicates::property_icontains(L"OpenPath", std::string("MCC\\Temporary\\UserContent\\Halo4\\Movie"));
+    inline auto reach_movie_path = krabs::predicates::property_icontains(L"OpenPath", std::string("MCC\\Temporary\\UserContent\\HaloReach\\Movie"));
+    inline auto ui_localization_path = krabs::predicates::property_icontains(L"OpenPath", std::string("data\\ui\\Localization"));
+}
 
 namespace certainly_not {
 inline krabs::predicates::none_of wininet_image({
@@ -189,8 +230,18 @@ inline krabs::predicates::all_of sound_file_read({
     &fio::file_read
 });
 
+inline krabs::predicates::all_of halo1_initial_sound_file_read({
+    &likely_is::halo1_initial_sound_file_read,
+    &fio::file_read
+});
+
 inline krabs::predicates::all_of bg_video_file_read({
     &likely_is::bk2_file_read,
+    &fio::file_read
+});
+
+inline krabs::predicates::all_of font_package_file_read({
+    &likely_is::font_package_file_read,
     &fio::file_read
 });
 
@@ -223,13 +274,154 @@ inline krabs::predicates::all_of restartscreen_gfx_file_created({
     &fio::file_create
 });
 
+inline krabs::predicates::all_of loadingscreen_gfx_file_created({
+    &likely_is::loadingscreen_gfx_file,
+    &fio::file_create
+});
+
 inline krabs::predicates::all_of paused_game_gfx_file_created({
     &likely_is::paused_game_gfx_file,
     &fio::file_create
 });
 
-inline krabs::predicates::all_of temp_carnage_report_created({
+inline krabs::predicates::all_of mp_temp_carnage_report_created({
     &likely_is::temp_carnage_report,
+    &contains::mpcarnagereport,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of survival_temp_carnage_report_created({
+    &likely_is::temp_carnage_report,
+    &contains::survivalcarnagereport,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of soundstream_pck_file_created({
+    &likely_is::soundstream_pck_file,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of halo1_match_init_file_created({
+    &likely_is::match_init_file,
+    &contains::halo1,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of halo2_match_launch_file_created({
+    &likely_is::match_launch_file,
+    &contains::halo2,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of match_temp_file_created({
+    &likely_is::match_temp_file,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of halo2a_autosave_temp_file_created({
+    &likely_is::halo2a_autosave_temp_file,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of halo3_autosave_temp_file_created({
+    &likely_is::halo3_autosave_temp_file,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of halo3odst_autosave_temp_file_created({
+    &likely_is::halo3odst_autosave_temp_file,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of halo4_autosave_temp_file_created({
+    &likely_is::halo4_autosave_temp_file,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of haloreach_autosave_temp_file_created({
+    &likely_is::haloreach_autosave_temp_file,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of halo2a_theater_file_created({
+    &likely_is::theater_file,
+    &contains::h2a_movie_path,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of halo3_theater_file_created({
+    &likely_is::theater_file,
+    &contains::h3_movie_path,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of halo3odst_theater_file_created({
+    &likely_is::theater_file,
+    &contains::h3odst_movie_path,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of halo4_theater_file_created({
+    &likely_is::theater_file,
+    &contains::h4_movie_path,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of haloreach_theater_file_created({
+    &likely_is::theater_file,
+    &contains::reach_movie_path,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of halo2_autosave_bin_file_created({
+    &likely_is::halo2_autosave_bin_file,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of halo3_autosave_bin_file_created({
+    &likely_is::halo3_autosave_bin_file,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of haloce_lang_bin_file_created({
+    &likely_is::haloce_lang_bin,
+    &contains::ui_localization_path,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of halo2_lang_bin_file_created({
+    &likely_is::halo2_lang_bin,
+    &contains::ui_localization_path,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of halo2a_lang_bin_file_created({
+    &likely_is::halo2a_lang_bin,
+    &contains::ui_localization_path,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of halo3_lang_bin_file_created({
+    &likely_is::halo3_lang_bin,
+    &contains::ui_localization_path,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of halo3odst_lang_bin_file_created({
+    &likely_is::halo3odst_lang_bin,
+    &contains::ui_localization_path,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of halo4_lang_bin_file_created({
+    &likely_is::halo4_lang_bin,
+    &contains::ui_localization_path,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of haloreach_lang_bin_file_created({
+    &likely_is::haloreach_lang_bin,
+    &contains::ui_localization_path,
     &fio::file_create
 });
 
@@ -255,12 +447,29 @@ inline krabs::predicates::any_of file_create_targets({
     &likely_is::main_menu_background_video_file,
     &likely_is::background_video_file,
     &likely_is::match_init_file,
+    &likely_is::match_launch_file,
     &likely_is::hud_scoring_gfx_file,
     &likely_is::restartscreen_gfx_file,
+    &likely_is::loadingscreen_gfx_file,
     &likely_is::temp_carnage_report,
-    &likely_is::sound_file
+    &likely_is::soundstream_pck_file,
+    &likely_is::sound_file,
+    &likely_is::match_temp_file,
+    &likely_is::halo3_autosave_bin_file,
+    &likely_is::halo2a_autosave_temp_file,
+    &likely_is::halo3_autosave_temp_file,
+    &likely_is::halo3odst_autosave_temp_file,
+    &likely_is::halo4_autosave_temp_file,
+    &likely_is::haloreach_autosave_temp_file,
+    &likely_is::theater_file,
+    &likely_is::haloce_lang_bin,
+    &likely_is::halo2_lang_bin,
+    &likely_is::halo2a_lang_bin,
+    &likely_is::halo3_lang_bin,
+    &likely_is::halo3odst_lang_bin,
+    &likely_is::halo4_lang_bin,
+    &likely_is::haloreach_lang_bin
 });
-
 
 inline krabs::predicates::all_of accepted_file_creates({
     &fio::file_create,
@@ -269,8 +478,10 @@ inline krabs::predicates::all_of accepted_file_creates({
 
 inline krabs::predicates::any_of file_io_sizes({
     &likely_is::sound_file_read,
-    &likely_is::pak_file_read,
-    &likely_is::bk2_file_read
+    //&likely_is::pak_file_read,
+    //&likely_is::bk2_file_read,
+    &likely_is::font_package_file_read,
+    &likely_is::halo1_initial_sound_file_read
 });
 
 inline krabs::predicates::all_of accepted_file_reads({
@@ -310,8 +521,8 @@ inline constexpr auto make_process_filter = []() {
 inline constexpr auto make_fiio_filter = []() {
     return krabs::event_filter{
         krabs::predicates::any_of({
-            &accepted_file_creates//,
-            //&accepted_file_reads
+            &accepted_file_creates,
+            &accepted_file_reads
         })
     };
 };

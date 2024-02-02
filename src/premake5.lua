@@ -22,6 +22,14 @@ project "mccinfo-monitor"
         "%{IncludeDir.imgui}",
         "%{IncludeDir.GLEW}",
         "%{IncludeDir.stb}",
+        "%{IncludeDir.wil}",
+        "%{IncludeDir.ValveFileVDF}",
+        "%{IncludeDir.krabs}",
+        "%{IncludeDir.compiletimefsm}",
+        "%{IncludeDir.lockfree}",
+        "%{IncludeDir.sml}",
+        "%{IncludeDir.cometa}",
+        "%{IncludeDir.frozen}",
     }
 
     links

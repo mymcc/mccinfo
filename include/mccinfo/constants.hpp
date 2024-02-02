@@ -123,7 +123,7 @@ namespace constants {
 namespace background_videos {
 namespace menu {
 
-frozen::unordered_map<video_keys, std::wstring_view, 38> basenames_w = {
+inline frozen::unordered_map<video_keys, std::wstring_view, 38> basenames_w = {
     {video_keys::ANVIL,                    L"anvil.bk2"},
     {video_keys::COVENANT_WAR,             L"CovenantWar.bk2"}, 
     {video_keys::ELITE,                    L"ELITE.bk2"},
@@ -164,7 +164,7 @@ frozen::unordered_map<video_keys, std::wstring_view, 38> basenames_w = {
     {video_keys::YAPYAP_VIGNETTE,          L"YapyapVignette.bk2"}
 };
 
-frozen::unordered_map<video_keys, std::string_view, 38> basenames = {
+inline frozen::unordered_map<video_keys, std::string_view, 38> basenames = {
     {video_keys::ANVIL,                    "anvil.bk2"},
     {video_keys::COVENANT_WAR,             "CovenantWar.bk2"}, 
     {video_keys::ELITE,                    "ELITE.bk2"},
@@ -206,7 +206,7 @@ frozen::unordered_map<video_keys, std::string_view, 38> basenames = {
 };
 
 
-std::vector<std::wstring_view> get_w(video_keys key_flags) {
+inline std::vector<std::wstring_view> get_w(video_keys key_flags) {
     std::vector<std::wstring_view> video_basenames;
 
     for (size_t i = 0; i < 38; ++i) {
@@ -219,7 +219,7 @@ std::vector<std::wstring_view> get_w(video_keys key_flags) {
     return video_basenames;
 }
 
-std::vector<std::string_view> get(video_keys key_flags) {
+inline std::vector<std::string_view> get(video_keys key_flags) {
     std::vector<std::string_view> video_basenames;
 
     for (size_t i = 0; i < 38; ++i) {
@@ -247,7 +247,14 @@ inline constexpr size_t pak_fio_read_size = 65536;
  * @brief The number of bytes Halo: The Master Chief Collection&trade; reads from its .pak (asset package) at a time during runtime.
  */
 inline constexpr size_t bk2_fio_read_size = 131072;
-
+/**
+ * @brief The number of bytes Halo: The Master Chief Collection&trade; reads from its .pak (asset package) at a time during runtime.
+ */
+inline constexpr size_t font_package_read_size = 49152;
+/**
+ * @brief The number of bytes Halo: The Master Chief Collection&trade; reads from its sounds_dialog.fsb (Halo 1 asset package) at the start of a Halo 1 match.
+ */
+inline constexpr size_t halo1_initial_fsb_read_size = 131072;
 #undef BITFLAG
 #undef MASK_BITS_UP_TO
 

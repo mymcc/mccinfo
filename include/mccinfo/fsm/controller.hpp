@@ -8,6 +8,7 @@
 
 #include "mccinfo/fsm/machines/mcc.hpp"
 #include "mccinfo/fsm/machines/user.hpp"
+#include "mccinfo/fsm/machines/game_id.hpp"
 
 #include "edges/edges.hpp"
 #include <iostream>
@@ -17,7 +18,7 @@
 namespace mccinfo {
 namespace fsm {
 
-bool file_has_open_handle(const std::wstring &file) {
+inline bool file_has_open_handle(const std::wstring &file) {
     HANDLE hFile = CreateFileW(file.c_str(),   // name of the write
                        GENERIC_WRITE,          // open for writing
                        0,                      // *** do not share ***
@@ -36,7 +37,7 @@ bool file_has_open_handle(const std::wstring &file) {
     }
 }
 
-void print_trace_event(std::wostringstream& woss, const EVENT_RECORD &record,
+inline void print_trace_event(std::wostringstream& woss, const EVENT_RECORD &record,
                                                const krabs::trace_context &trace_context) {
     woss << L"=============================================================\n";
 
@@ -97,7 +98,8 @@ template <class = class Dummy> class controller {
     
     controller(callback_table& cbtable)
         : mcc_sm{cbtable},
-        user_sm{cbtable}
+        user_sm{cbtable},
+        game_id_sm{cbtable}
     {};
 
     void handle_trace_event(const EVENT_RECORD &record,
@@ -118,6 +120,7 @@ template <class = class Dummy> class controller {
 
             handle_trace_event_impl<decltype(mcc_sm)>(mcc_sm, record, trace_context);
             handle_trace_event_impl<decltype(user_sm)>(user_sm, record, trace_context);
+            handle_trace_event_impl<decltype(game_id_sm)>(game_id_sm, record, trace_context);
         }
     }
   private:
@@ -211,13 +214,13 @@ template <class = class Dummy> class controller {
     states::state_context sc{};
     boost::sml::sm<machines::mcc> mcc_sm;
     boost::sml::sm<machines::user> user_sm;
-
+    boost::sml::sm<machines::game_id> game_id_sm;
 
   private: // filtering
     uint32_t mcc_pid = UINT32_MAX;
     bool mcc_on = false;
-    //bool log_full = false;
-    bool log_full = true;
+    bool log_full = false;
+    //bool log_full = true;
     bool done_identification = false;
 };
 } // namespace fsm

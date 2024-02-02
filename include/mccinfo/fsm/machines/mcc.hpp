@@ -29,8 +29,16 @@ struct mcc {
                                          std::cout << "off\n" << std::flush;
                                          cbtable.execute_callback(ON_STATE_ENTRY | OFF);
                                      },
-        boost::sml::state<launching> + boost::sml::on_entry<_> / [] { std::cout << "launching\n" << std::flush; },
-        boost::sml::state<on> + boost::sml::on_entry<_> / [] { std::cout << "on\n" << std::flush; }
+        boost::sml::state<launching> + boost::sml::on_entry<_> /
+                                     [](callback_table& cbtable) {
+                                         std::cout << "launching\n" << std::flush;
+                                         cbtable.execute_callback(ON_STATE_ENTRY | LAUNCHING);
+                                     },
+        boost::sml::state<on> + boost::sml::on_entry<_> /
+                                     [](callback_table& cbtable) {
+                                         std::cout << "on\n" << std::flush;
+                                         cbtable.execute_callback(ON_STATE_ENTRY | ON);
+                                     }
     );
 }
 };
