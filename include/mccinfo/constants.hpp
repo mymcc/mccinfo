@@ -14,6 +14,9 @@ namespace constants {
 #define MASK_BITS_UP_TO(x) \
     ((1ULL << (x + 1)) - 1)
 
+#define MASK_BITS_IN_RANGE(x, y) \
+    (MASK_BITS_UP_TO(y) ^ ((x) > 0 ? MASK_BITS_UP_TO((x) - 1) : 0))
+
 /**
  * @brief The Steam&trade; Application ID for Halo: The Master Chief Collection&trade;.
  *
@@ -232,8 +235,199 @@ inline std::vector<std::string_view> get(video_keys key_flags) {
     return video_basenames;
 }
 
+} // menu
+} // background_videos
+
+namespace localization_binaries {
+
+enum lang_keys : uint64_t {
+    CS  = BITFLAG(0),
+    CT  = BITFLAG(1),
+    DA  = BITFLAG(2),
+    DBG = BITFLAG(3),
+    DE  = BITFLAG(4),
+    DU  = BITFLAG(5),
+    EN  = BITFLAG(6),
+    FI  = BITFLAG(7),
+    FR  = BITFLAG(8),
+    IT  = BITFLAG(9),
+    JP  = BITFLAG(10),
+    KO  = BITFLAG(11),
+    NO  = BITFLAG(12),
+    PB  = BITFLAG(13),
+    PO  = BITFLAG(14),
+    PR  = BITFLAG(15),
+    RU  = BITFLAG(16),
+    SP  = BITFLAG(17),
+    SU  = BITFLAG(18),
+    ALL = MASK_BITS_UP_TO(18),
+};
+
+enum game_keys : uint64_t {
+    GLOBAL      = BITFLAG(0),
+    HALO1       = BITFLAG(1),
+    HALO2       = BITFLAG(2),
+    HALO2A      = BITFLAG(3),
+    HALO3       = BITFLAG(4),
+    HALO3ODST   = BITFLAG(5),
+    HALO4       = BITFLAG(6),
+    HALOREACH   = BITFLAG(7),
+    DEBUG       = BITFLAG(8),
+    BLNK_GLOBAL = BITFLAG(9),
+    ID_GLOBAL   = BITFLAG(10),
+    LBL_GLOBAL  = BITFLAG(11),
+    MAX_GLOBAL  = BITFLAG(12),
+    ALL_GAMES   = MASK_BITS_IN_RANGE(1, 7),
+};
+} // localization_binaries
+} // constants
+} // mccinfo
+
+namespace frozen {
+
+template <> struct elsa<mccinfo::constants::localization_binaries::lang_keys> : elsa<uint64_t> {};
+template <> struct elsa<mccinfo::constants::localization_binaries::game_keys> : elsa<uint64_t> {};
+
+} // frozen
+
+namespace mccinfo{
+namespace constants{
+namespace localization_binaries {
+
+inline frozen::unordered_map<lang_keys, std::wstring_view, 19> lang_prefixes_w = {
+    {lang_keys::CS,  L"CS_"},
+    {lang_keys::CT,  L"CT_"},
+    {lang_keys::DA,  L"DA_"},
+    {lang_keys::DBG, L"DBG_"},
+    {lang_keys::DE,  L"DE_"},
+    {lang_keys::DU,  L"DU_"},
+    {lang_keys::EN,  L"EN_"},
+    {lang_keys::FI,  L"FI_"},
+    {lang_keys::FR,  L"FR_"},
+    {lang_keys::IT,  L"IT_"},
+    {lang_keys::JP,  L"JP_"},
+    {lang_keys::KO,  L"KO_"},
+    {lang_keys::NO,  L"NO_"},
+    {lang_keys::PB,  L"PB_"},
+    {lang_keys::PO,  L"PO_"},
+    {lang_keys::PR,  L"PR_"},
+    {lang_keys::RU,  L"RU_"},
+    {lang_keys::SP,  L"SP_"},
+    {lang_keys::SU,  L"SU_"}
+};
+
+inline frozen::unordered_map<lang_keys, std::string_view, 19> lang_prefixes = {
+    {lang_keys::CS,  "CS_"},
+    {lang_keys::CT,  "CT_"},
+    {lang_keys::DA,  "DA_"},
+    {lang_keys::DBG, "DBG_"},
+    {lang_keys::DE,  "DE_"},
+    {lang_keys::DU,  "DU_"},
+    {lang_keys::EN,  "EN_"},
+    {lang_keys::FI,  "FI_"},
+    {lang_keys::FR,  "FR_"},
+    {lang_keys::IT,  "IT_"},
+    {lang_keys::JP,  "JP_"},
+    {lang_keys::KO,  "KO_"},
+    {lang_keys::NO,  "NO_"},
+    {lang_keys::PB,  "PB_"},
+    {lang_keys::PO,  "PO_"},
+    {lang_keys::PR,  "PR_"},
+    {lang_keys::RU,  "RU_"},
+    {lang_keys::SP,  "SP_"},
+    {lang_keys::SU,  "SU_"}
+};
+
+inline frozen::unordered_map<game_keys, std::wstring_view, 13> game_suffixes_w = {
+    {game_keys::GLOBAL,      L"Global"},
+    {game_keys::HALO1,       L"Halo1"},
+    {game_keys::HALO2,       L"Halo2"},
+    {game_keys::HALO2A,      L"Halo2A"}, 
+    {game_keys::HALO3,       L"Halo3"}, 
+    {game_keys::HALO3ODST,   L"Halo3ODST"},
+    {game_keys::HALO4,       L"Halo4"},   
+    {game_keys::HALOREACH,   L"HaloReach"},
+    {game_keys::DEBUG,       L"Debug"},   
+    {game_keys::BLNK_GLOBAL, L"BLNK_Global"},
+    {game_keys::ID_GLOBAL,   L"ID_Global"}, 
+    {game_keys::LBL_GLOBAL,  L"LBL_Global"},
+    {game_keys::MAX_GLOBAL,  L"MAX_Global"}
+};
+
+inline frozen::unordered_map<game_keys, std::string_view, 13> game_suffixes = {
+    {game_keys::GLOBAL,      "Global"},
+    {game_keys::HALO1,       "Halo1"},
+    {game_keys::HALO2,       "Halo2"},
+    {game_keys::HALO2A,      "Halo2A"}, 
+    {game_keys::HALO3,       "Halo3"}, 
+    {game_keys::HALO3ODST,   "Halo3ODST"},
+    {game_keys::HALO4,       "Halo4"},   
+    {game_keys::HALOREACH,   "HaloReach"},
+    {game_keys::DEBUG,       "Debug"},   
+    {game_keys::BLNK_GLOBAL, "BLNK_Global"},
+    {game_keys::ID_GLOBAL,   "ID_Global"}, 
+    {game_keys::LBL_GLOBAL,  "LBL_Global"},
+    {game_keys::MAX_GLOBAL,  "MAX_Global"}
+};
+
+inline std::vector<std::wstring> get_w(lang_keys key_flags, uint64_t game_flags) {
+
+    std::vector<std::wstring_view> lang_prefixes;
+    for (size_t i = 0; i < 19; ++i) {
+        lang_keys flag = (lang_keys)(1ULL << i);
+        if ((key_flags & flag) == flag) {
+            lang_prefixes.push_back(lang_prefixes_w.at(flag));
+        }
+    }
+
+    std::vector<std::wstring_view> game_suffixes;
+    for (size_t i = 0; i < 13; ++i) {
+        game_keys flag = (game_keys)(1ULL << i);
+        if ((game_flags & flag) == flag) {
+            game_suffixes.push_back(game_suffixes_w.at(flag));
+        }
+    }
+
+    std::vector<std::wstring> lang_binary_basenames;
+    if ((lang_prefixes.size() > 0) && (game_suffixes.size() > 0)) {
+        for (const auto &prefix : lang_prefixes) {
+            std::wstring basename = std::wstring(prefix);
+            for (const auto& suffix : game_suffixes) {
+                lang_binary_basenames.push_back(basename + std::wstring(suffix));
+            }
+        }
+    }
+
+    return lang_binary_basenames;
 }
+
+inline std::vector<std::string> get(lang_keys key_flags, game_keys game_flags) {
+    std::vector<std::string> lang_binary_basenames;
+
+    std::string_view lang_prefix;
+    for (size_t i = 0; i < 19; ++i) {
+        lang_keys flag = (lang_keys)(1ULL << i);
+        if ((key_flags & flag) == flag) {
+            lang_prefix = lang_prefixes.at(flag);
+        }
+    }
+
+    std::string_view game_suffix;
+    for (size_t i = 0; i < 13; ++i) {
+        game_keys flag = (game_keys)(1ULL << i);
+        if ((key_flags & flag) == flag) {
+            game_suffix = game_suffixes.at(flag);
+        }
+    }
+
+    if ((lang_prefix.size() > 0) && (game_suffix.size() > 0)) {
+        lang_binary_basenames.push_back(std::string(lang_prefix) + std::string(game_suffix));
+    }
+
+    return lang_binary_basenames;
 }
+
+} // namespace localization_binaries
 
 /**
  * @brief The number of bytes Halo: The Master Chief Collection&trade; reads from .fsb (sound files) at a time during runtime.

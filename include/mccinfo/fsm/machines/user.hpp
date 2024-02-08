@@ -28,6 +28,7 @@ struct user {
         boost::sml::state<identifying_session> + event<mcc_terminate> = boost::sml::state<offline>,
 
         boost::sml::state<in_menus> + event<load_start> = boost::sml::state<loading_in>,
+        boost::sml::state<in_menus> + event<match_found> = boost::sml::state<loading_in>,
         boost::sml::state<in_menus> + event<mcc_terminate> = boost::sml::state<offline>,
 
         boost::sml::state<loading_in> + event<match_start> = boost::sml::state<in_game>,

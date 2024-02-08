@@ -18,6 +18,26 @@
 namespace mccinfo {
 namespace fsm {
 
+
+inline events::event_t get_game_from_path(const std::wstring &file) {
+    if (file.find(L"Halo1") != std::wstring::npos)
+        return events::haloce_found{};
+    else if (file.find(L"Halo2") != std::wstring::npos)
+        return events::halo2_found{};
+    else if (file.find(L"Halo2A") != std::wstring::npos)
+        return events::halo2a_found{};
+    else if (file.find(L"Halo3") != std::wstring::npos)
+        return events::halo3_found{};
+    else if (file.find(L"Halo3ODST") != std::wstring::npos)
+        return events::halo3odst_found{};
+    else if (file.find(L"Halo4") != std::wstring::npos)
+        return events::halo4_found{};
+    else if (file.find(L"HaloReach") != std::wstring::npos)
+        return events::haloreach_found{};
+    else
+        throw std::runtime_error("get_game_from_path(): game not found");
+}
+
 inline bool file_has_open_handle(const std::wstring &file) {
     HANDLE hFile = CreateFileW(file.c_str(),   // name of the write
                        GENERIC_WRITE,          // open for writing
@@ -35,6 +55,63 @@ inline bool file_has_open_handle(const std::wstring &file) {
         CloseHandle(hFile);
         return false;
     }
+}
+
+inline std::optional<events::event_t> identify_game() {
+    std::wstring prefix(L"F:\\SteamLibrary\\steamapps\\common\\Halo The Master Chief "
+                        "Collection\\");
+
+    std::wstring temp_prefix(L"C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Config\\");
+    // halo1
+    {
+        std::wstring path = prefix + L"halo1\\sound\\pc\\sounds_stream.fsb";
+        if (file_has_open_handle(path)) {
+            return events::haloce_found{};
+        }
+    }
+
+    // halo 2
+    {
+        // need to discern between h2 and h2a
+        std::wstring pref_path = temp_prefix + L"Halo2\\preferences.dat";
+
+        // halo2 classic mp/or h2/h2a campaign
+        if (file_has_open_handle(pref_path)) {
+            return events::halo2_found{}; 
+        }
+
+        // h2a mp
+        std::wstring map_path = prefix + L"groundhog\\maps\\shared.map";
+        if (file_has_open_handle(map_path)) {
+            return events::halo2a_found{};
+        }
+    }
+
+    // halo 3
+    {
+        std::wstring path = prefix + L"halo3\\maps\\shared.map";
+        if (file_has_open_handle(path)) {
+            return events::halo3_found{};
+        }
+    }
+
+    // halo 4
+    {
+        std::wstring path = prefix + L"halo4\\maps\\shared.map";
+        if (file_has_open_handle(path)) {
+            return events::halo4_found{};
+        }
+    }
+
+    // halo reach
+    {
+        std::wstring path = prefix + L"haloreach\\maps\\shared.map";
+        if (file_has_open_handle(path)) {
+            return events::haloreach_found{};
+        }
+    }
+
+    return std::nullopt;
 }
 
 inline void print_trace_event(std::wostringstream& woss, const EVENT_RECORD &record,
@@ -198,6 +275,14 @@ template <class = class Dummy> class controller {
             if (switch_to_in_match) {
                 std::wcout << L"Sending Artificial match_found Event: " << L"\n";
                 sm.process_event(events::match_found{});
+
+                auto game_event = identify_game();
+
+                if (game_event.has_value()) {
+                    std::visit([&](auto &&evt) { game_id_sm.process_event(evt); }, game_event.value());
+                }
+
+
             } else {
                 std::wcout << L"Sending Artificial in_menus_identified Event: " << L"\n";
                 sm.process_event(events::in_menus_identified{});
