@@ -270,16 +270,21 @@ template <class = class Dummy> class controller {
                 //std::wcout << open << L" : " << target << L'\n' << std::flush;
                 if (open)
                     switch_to_in_match = false;
+
             }
 
             if (switch_to_in_match) {
-                std::wcout << L"Sending Artificial match_found Event: " << L"\n";
-                sm.process_event(events::match_found{});
 
                 auto game_event = identify_game();
 
                 if (game_event.has_value()) {
+                    std::wcout << L"Sending Artificial match_found Event: " << L"\n";
+                    sm.process_event(events::match_found{});
+                    std::wcout << L"Sending Artificial game_event Event: " << L"\n";
                     std::visit([&](auto &&evt) { game_id_sm.process_event(evt); }, game_event.value());
+                } else {
+                    std::wcout << L"Sending Artificial launch_identified Event: " << L"\n";
+                    sm.process_event(events::launch_identified{});
                 }
 
 
@@ -288,9 +293,16 @@ template <class = class Dummy> class controller {
                 sm.process_event(events::in_menus_identified{});
             }
 
+
+
             done_identification = true;
         }
-
+        // still to be fixed
+        //if (user_sm.is(boost::sml::state<states::in_menus>) &&
+        //    (!game_id_sm.is(boost::sml::state<states::none>)))
+        //{
+        //    //std::wcout << L"Sending Artificial match_found Event: " << L"\n";
+        //}
         if (log_full || state_change) std::wcout << woss.str() << std::flush;
     }
   private:

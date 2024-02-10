@@ -159,6 +159,7 @@ inline auto cryptui_image = krabs::predicates::property_icontains(L"FileName", s
 inline auto wininet_image = krabs::predicates::property_icontains(L"FileName", std::string("wininet.dll"));
 inline auto winrnr_image = krabs::predicates::property_icontains(L"FileName", std::string("winrnr.dll"));
 inline auto wsock32_image = krabs::predicates::property_icontains(L"FileName", std::string("wsock32.dll"));
+inline auto partywin_image = krabs::predicates::property_icontains(L"FileName", std::string("PartyWin.dll"));
 
 inline auto halo1_image = krabs::predicates::property_icontains(L"FileName", std::string("halo1.dll"));
 inline auto halo2_image = krabs::predicates::property_icontains(L"FileName", std::string("halo2.dll"));
@@ -436,6 +437,7 @@ CREATE_PREDICATE(image::loaded_at_trace_start, cryptui_image)
 CREATE_PREDICATE(image::loaded_at_trace_start, wininet_image)
 CREATE_PREDICATE(image::loaded_at_trace_start, winrnr_image)
 CREATE_PREDICATE(image::loaded_at_trace_start, wsock32_image)
+CREATE_PREDICATE(image::loaded_at_trace_start, partywin_image)
 
 } // loaded_at_trace_start
 
@@ -501,6 +503,7 @@ inline krabs::predicates::any_of image_load_targets({
     &likely_is::halo4_image,
     &likely_is::halo_reach_image,
     &likely_is::groundhog_image,
+    &likely_is::partywin_image,
 });
 
 inline krabs::predicates::all_of accepted_image_loads({

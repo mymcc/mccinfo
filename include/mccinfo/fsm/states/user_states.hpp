@@ -73,6 +73,9 @@ MCCFSM_INLINE potentially_match_underway = edges::make_sequence(
     &predicates::certainly_not::wininet_image
 );
 
+//MCCFSM_INLINE not_still_waiting_on_launch =
+//    edges::make_sequence(&predicates::events::loaded_at_trace_start::partywin_image);
+
 
 struct offline : public state<offline>{
     MCCFSM_STATIC edges = edges::make_edges(

@@ -7,6 +7,8 @@
 #include <tlhelp32.h>
 #undef NOMINMAX
 
+#include <psapi.h>
+
 #include <cstdint>
 #pragma warning(push)
 #pragma warning(disable : 4068)
@@ -315,5 +317,33 @@ std::optional<std::string> ModuleBaseNameFromThreadID(DWORD threadID) {
     }
 }
 
+inline std::vector<std::wstring> GetLoadedModulesFromProcessID(DWORD processID) {
+    HMODULE hMods[1024];
+    HANDLE hProcess;
+    DWORD cbNeeded;
+
+    hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
+
+    if (hProcess ==  NULL);
+        return {};
+
+    std::vector<std::wstring> modules;
+
+    if (EnumProcessModules(hProcess, hMods, sizeof(hMods), &cbNeeded)) {
+        for (size_t i = 0; i < (cbNeeded / sizeof(HMODULE)); ++i) {
+            WCHAR szModName[MAX_PATH];
+
+            // Get the full path to the module's file.
+
+            if (GetModuleFileNameExW(hProcess, hMods[i], szModName,
+                                    sizeof(szModName) / sizeof(WCHAR))) {
+                modules.push_back(std::wstring(szModName));
+            }
+        }
+    }
+    CloseHandle(hProcess);
+
+    return modules;
+}
 } // namespace utility
 } // namespace mccinfo

@@ -1,6 +1,7 @@
 #pragma once
 
 #pragma comment(lib, "Version.lib")
+#pragma comment(lib, "Psapi.lib")
 
 #include "mccinfo/utility.hpp"
 #include "mccinfo/constants.hpp"

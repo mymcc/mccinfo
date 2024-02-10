@@ -22,6 +22,7 @@ namespace events {
 		events::match_abort,
 		events::match_end,
 		events::unload_end,
+		events::launch_identified,
 		events::in_menus_identified,
 		events::match_found,
 		events::haloce_found,
