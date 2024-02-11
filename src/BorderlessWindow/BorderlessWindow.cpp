@@ -11,6 +11,7 @@
 #include <dwmapi.h>
 #include <iostream>
 #include <unordered_map>
+#include <intsafe.h>
 
 namespace 
 {
@@ -95,7 +96,7 @@ namespace
 		return window_class_name;
 	}
 
-	unique_handle create_window(WNDPROC wndproc, void* userdata)
+	HWND create_window(WNDPROC wndproc, void* userdata)
 	{
 		HWND handle = CreateWindowExW(0, window_class(wndproc), L"Borderless Window",
 			static_cast<DWORD>(Style::aero_borderless), CW_USEDEFAULT, CW_USEDEFAULT,
@@ -105,45 +106,44 @@ namespace
 		if (!handle) throw last_error("failed to create window");
 
 
-		return unique_handle{ handle };
+		return handle;
 	}
 }
 
 BorderlessWindow::BorderlessWindow()
-	: m_hHWND{ create_window(&this->BorderlessWindow::WndProc, this) }
-{
-	s_BorderlessInstanceMap.insert({ m_hHWND.get(), this });
-	GetClassNameW(m_hHWND.get(), m_wstrWC, 256);
+    : m_hHWND(create_window(&this->BorderlessWindow::WndProc, this)) {
+	s_BorderlessInstanceMap.insert({ m_hHWND, this });
+	GetClassNameW(m_hHWND, m_wstrWC, 256);
 	set_composition(true);
 	set_borderless(true);
 	set_borderless_shadow(true);
-	::ShowWindow(m_hHWND.get(), SW_SHOW);
+	::ShowWindow(m_hHWND, SW_SHOW);
 }
 
 BorderlessWindow::BorderlessWindow(unsigned int width, unsigned int height)
-	: m_hHWND{ create_window(&BorderlessWindow::WndProc, this) }
-{
-	s_BorderlessInstanceMap.insert({ m_hHWND.get(), this });
-	GetClassNameW(m_hHWND.get(), m_wstrWC, 256);
+    : m_hHWND{create_window(&this->BorderlessWindow::WndProc, this)} {
+	s_BorderlessInstanceMap.insert({ m_hHWND, this });
+	GetClassNameW(m_hHWND, m_wstrWC, 256);
 	set_composition(true);
 	set_borderless(true);
 	set_borderless_shadow(true);
-	::ShowWindow(m_hHWND.get(), SW_SHOW);
+	::ShowWindow(m_hHWND, SW_SHOW);
 
 	RECT r;
-	::GetWindowRect(m_hHWND.get(), &r);
-	::SetWindowPos(m_hHWND.get(), NULL, r.left, r.top, width, height, SWP_FRAMECHANGED);
+	::GetWindowRect(m_hHWND, &r);
+	::SetWindowPos(m_hHWND, NULL, r.left, r.top, width, height, SWP_FRAMECHANGED);
 }
 
 BorderlessWindow::BorderlessWindow(std::function<void()> render) 
 	: m_hHWND{ create_window(&BorderlessWindow::WndProc, this) }, m_fRender(render)
 {
-	s_BorderlessInstanceMap.insert({ m_hHWND.get(), this });
-	GetClassNameW(m_hHWND.get(), m_wstrWC, 256);
+	s_BorderlessInstanceMap.insert({ m_hHWND, this });
+    
+	GetClassNameW(m_hHWND, m_wstrWC, 256);
 	set_composition(true);
 	set_borderless(true);
 	set_borderless_shadow(true);
-	::ShowWindow(m_hHWND.get(), SW_SHOW);
+	::ShowWindow(m_hHWND, SW_SHOW);
 }
 
 VOID BorderlessWindow::set_composition(BOOL enabled)
@@ -153,27 +153,34 @@ VOID BorderlessWindow::set_composition(BOOL enabled)
 	bb.dwFlags = DWM_BB_ENABLE | DWM_BB_BLURREGION;
 	bb.hRgnBlur = hRgn;
 	bb.fEnable = TRUE;
-	DwmEnableBlurBehindWindow(m_hHWND.get(), &bb);
+	DwmEnableBlurBehindWindow(m_hHWND, &bb);
 }
 
 VOID BorderlessWindow::set_borderless(BOOL enabled)
 {
-	Style new_style = (enabled) ? select_borderless_style() : Style::windowed;
-	Style old_style = static_cast<Style>(::GetWindowLongPtrW(m_hHWND.get(), GWL_STYLE));
+    Style new_style = (enabled) ? select_borderless_style() : Style::windowed;
+    Style old_style = static_cast<Style>(::GetWindowLongPtrW(m_hHWND, GWL_STYLE));
 
-	if (new_style != old_style) 
-	{
-		m_bBorderless = enabled;
+    if (new_style != old_style) {
+            m_bBorderless = enabled;
 
-		::SetWindowLongPtrW(m_hHWND.get(), GWL_STYLE, static_cast<LONG>(new_style));
+			bool made_it = false;
+            while (!made_it) {
+                try {
+					::SetWindowLongPtrW(m_hHWND, GWL_STYLE, static_cast<LONG>(new_style));
+                    made_it = true;
+                } catch (...) {
+                }
+            }
 
-		// when switching between borderless and windowed, restore appropriate shadow state
-		set_shadow(m_hHWND.get(), m_bBorderless_shadow && (new_style != Style::windowed));
+            // when switching between borderless and windowed, restore appropriate shadow state
+            set_shadow(m_hHWND, m_bBorderless_shadow && (new_style != Style::windowed));
 
-		// redraw frame
-		::SetWindowPos(m_hHWND.get(), nullptr, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE);
-		::ShowWindow(m_hHWND.get(), SW_SHOW);
-	}
+            // redraw frame
+            ::SetWindowPos(m_hHWND, nullptr, 0, 0, 0, 0,
+                           SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE);
+            ::ShowWindow(m_hHWND, SW_SHOW);
+    }
 }
 
 VOID BorderlessWindow::set_borderless_shadow(BOOL enabled)
@@ -181,7 +188,7 @@ VOID BorderlessWindow::set_borderless_shadow(BOOL enabled)
 	if (m_bBorderless)
 	{
 		m_bBorderless_shadow = enabled;
-		set_shadow(m_hHWND.get(), enabled);
+		set_shadow(m_hHWND, enabled);
 	}
 }
 
@@ -378,7 +385,7 @@ LRESULT BorderlessWindow::hit_test(POINT cursor)
 	};
 
 	RECT window{};
-	if (!::GetWindowRect(m_hHWND.get(), &window)) return HTNOWHERE;
+	if (!::GetWindowRect(m_hHWND, &window)) return HTNOWHERE;
 
 	CONST UINT drag = m_bBorderless_drag ? HTCAPTION : HTCLIENT;
 

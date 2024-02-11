@@ -230,12 +230,12 @@ void Application::Run() {
                     DWORD err = GetLastError();
                     std::cerr << "Failed to set timer, error code = " << err << std::endl;
                     CloseHandle(m_hFrameIRTimer);
-                    __debugbreak();
+                    //__debugbreak();
                 }
 
                 DWORD result = WaitForSingleObjectEx(m_hFrameIRTimer, INFINITE, TRUE);
                 if (!(result == WAIT_OBJECT_0)) {
-                    __debugbreak();
+                    //__debugbreak();
                 }
             }
             
@@ -283,17 +283,17 @@ void Application::Init() {
         std::exit(1);
     }
 
-    if (!::CreateDeviceWGL(m_Window->m_hHWND.get(), &g_MainWindow)) {
-        ::CleanupDeviceWGL(m_Window->m_hHWND.get(), &g_MainWindow);
-        ::DestroyWindow(m_Window->m_hHWND.get());
+    if (!::CreateDeviceWGL(m_Window->m_hHWND, &g_MainWindow)) {
+        ::CleanupDeviceWGL(m_Window->m_hHWND, &g_MainWindow);
+        ::DestroyWindow(m_Window->m_hHWND);
         ::UnregisterClassW((LPCWSTR)m_Window->m_wstrWC, GetModuleHandle(NULL));
         std::exit(1);
     }
 
     wglMakeCurrent(g_MainWindow.hDC, g_hRC);
 
-    ::ShowWindow(m_Window->m_hHWND.get(), SW_SHOWDEFAULT);
-    ::UpdateWindow(m_Window->m_hHWND.get());
+    ::ShowWindow(m_Window->m_hHWND, SW_SHOWDEFAULT);
+    ::UpdateWindow(m_Window->m_hHWND);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -317,7 +317,7 @@ void Application::Init() {
     }
 
     // Setup Platform/Renderer backends
-    ImGui_ImplWin32_InitForOpenGL(m_Window->m_hHWND.get());
+    ImGui_ImplWin32_InitForOpenGL(m_Window->m_hHWND);
     ImGui_ImplOpenGL3_Init();
 
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
@@ -326,7 +326,7 @@ void Application::Init() {
         IM_ASSERT(platform_io.Renderer_DestroyWindow == NULL);
         IM_ASSERT(platform_io.Renderer_SwapBuffers == NULL);
         IM_ASSERT(platform_io.Platform_RenderWindow == NULL);
-        platform_io.Platform_CreateWindow = Hook_Platform_CreateWindow;
+        //platform_io.Platform_CreateWindow = Hook_Platform_CreateWindow;
 
         platform_io.Renderer_CreateWindow = Hook_Renderer_CreateWindow;
         platform_io.Renderer_DestroyWindow = Hook_Renderer_DestroyWindow;
@@ -400,7 +400,7 @@ void Application::RenderAppFrame() {
     // Blit
     ::SwapBuffers(g_MainWindow.hDC);
 
-    ImGui_ImplWin32_EnableAlphaCompositing(m_Window->m_hHWND.get());
+    ImGui_ImplWin32_EnableAlphaCompositing(m_Window->m_hHWND);
     ImGui_ImplWin32_EnableDpiAwareness();
 }
 void Application::FixTimestep()
@@ -408,7 +408,7 @@ void Application::FixTimestep()
 }
 void Application::CenterWindow() {
     RECT rect;
-    GetWindowRect(m_Window->m_hHWND.get(), &rect);
+    GetWindowRect(m_Window->m_hHWND, &rect);
 
     int screen_width = GetSystemMetrics(SM_CXSCREEN);
     int screen_height = GetSystemMetrics(SM_CYSCREEN);
@@ -419,7 +419,7 @@ void Application::CenterWindow() {
     int x = (screen_width - window_width) / 2;
     int y = (screen_height - window_height) / 2;
 
-    SetWindowPos(m_Window->m_hHWND.get(), NULL, x, y, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
+    SetWindowPos(m_Window->m_hHWND, NULL, x, y, 0, 0, SWP_NOZORDER | SWP_NOSIZE);
 }
 void Application::ApplyBorderlessFrame()
 {
@@ -434,7 +434,7 @@ void Application::ApplyBorderlessFrame()
     const WINDOWCOMPOSITIONATTRIBDATA data = { WCA_ACCENT_POLICY, &policy,
                                               sizeof(policy) };
 
-    SetWindowCompositionAttribute(m_Window->m_hHWND.get(), &data);
+    SetWindowCompositionAttribute(m_Window->m_hHWND, &data);
 }
 void Application::ApplyBgColors()
 {

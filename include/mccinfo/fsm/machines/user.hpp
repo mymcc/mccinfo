@@ -39,6 +39,7 @@ struct user {
         boost::sml::state<in_game> + event<match_end> = boost::sml::state<loading_out>,
         boost::sml::state<in_game> + event<mcc_terminate> = boost::sml::state<offline>,
 
+        boost::sml::state<loading_out> + event<load_start> = boost::sml::state<loading_in>,
         boost::sml::state<loading_out> + event<unload_end> = boost::sml::state<in_menus>,
         boost::sml::state<loading_out> + event<mcc_terminate> = boost::sml::state<offline>,
 

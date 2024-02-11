@@ -397,5 +397,13 @@ std::optional<MCCInstallInfo> LookForSteamInstallInfo(void) {
 std::optional<MCCInstallInfo> LookForMicrosoftStoreInstallInfo(void) {
     return LookForInstallInfo(StoreVersion::MicrosoftStore);
 }
+
+std::optional<HWND> LookForMCCWindowHandle(void) {
+    HWND hwnd = FindWindowW(L"UnrealWindow", L"Halo: The Master Chief Collection  ");
+    if (hwnd != NULL)
+        return hwnd;
+    else
+        return std::nullopt;
+}
 } // namespace query
 } // namespace mccinfo

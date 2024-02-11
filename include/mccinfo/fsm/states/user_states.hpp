@@ -60,23 +60,6 @@ MCCFSM_INLINE mcc_started_ = edges::make_sequence(&predicates::events::mcc_start
 MCCFSM_INLINE mcc_found__ = edges::make_sequence(&predicates::events::mcc_found);
 MCCFSM_INLINE match_paused_ = edges::make_sequence(&predicates::events::paused_game_gfx_file_created);
 
-
-// works when players are launching when app is hot + when the last 2 or more consecutive matches are (halo3, ...?)
-MCCFSM_INLINE no_match_underway = edges::make_sequence(
-    &predicates::events::loaded_at_trace_start::wininet_image,
-    &predicates::events::loaded_at_trace_start::wsock32_image
-);
-
-// needs to be a strict sequence
-MCCFSM_INLINE potentially_match_underway = edges::make_sequence(
-    &predicates::events::loaded_at_trace_start::cryptui_image,
-    &predicates::certainly_not::wininet_image
-);
-
-//MCCFSM_INLINE not_still_waiting_on_launch =
-//    edges::make_sequence(&predicates::events::loaded_at_trace_start::partywin_image);
-
-
 struct offline : public state<offline>{
     MCCFSM_STATIC edges = edges::make_edges(
         std::make_tuple(&mcc_started_, events::mcc_start{}),
@@ -94,7 +77,7 @@ struct waiting_on_launch : public state<waiting_on_launch> {
 struct identifying_session : public state<identifying_session> {
     MCCFSM_STATIC edges = edges::make_edges(
         std::make_tuple(&mm_bg_video_file_created, events::launch_complete{}),
-        std::make_tuple(&no_match_underway, events::in_menus_identified{}),
+        //std::make_tuple(&no_match_underway, events::in_menus_identified{}),
         std::make_tuple(&mcc_lossed_, events::mcc_terminate{})
     );
 };
@@ -133,6 +116,7 @@ struct in_game : public state<in_game>{
 
 struct loading_out : public state<loading_out>{
     MCCFSM_STATIC edges = edges::make_edges(
+        std::make_tuple(&match_loading, events::load_start{}),
         std::make_tuple(&game_unloaded, events::unload_end{}),
         std::make_tuple(&mcc_lossed_, events::mcc_terminate{})
     );

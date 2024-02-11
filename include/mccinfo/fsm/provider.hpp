@@ -127,7 +127,7 @@ class event_provider {
 
         trace_.enable(process_provider_);
         trace_.enable(fiio_provider_);
-        trace_.enable(il_provider_);
+        //trace_.enable(il_provider_);
 
     }
     void start() {

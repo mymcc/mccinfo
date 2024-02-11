@@ -11,15 +11,6 @@
 
 #define BORDERLESS_USE_IMGUI // Tell BorderlessWindow to call ImGui_ImplWin32_WndProcHandler in WndProc
 
-struct hwnd_deleter {
-    using pointer = HWND;
-    auto operator()(HWND handle) const -> void {
-        ::DestroyWindow(handle);
-    }
-};
-
-using unique_handle = std::unique_ptr<HWND, hwnd_deleter>;
-
 class BorderlessWindow
 {
 public:
@@ -40,7 +31,7 @@ public:
     BOOL is_in_size_move() CONST;
 
 
-    unique_handle m_hHWND;
+    HWND m_hHWND;
     LPWSTR m_wstrWC;
 
 private:
