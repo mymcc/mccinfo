@@ -290,6 +290,10 @@ class filtering_context {
     bool done_identification = false;
 };
 
+struct map_info {
+    std::string map;
+};
+
 }
 
 template <class = class Dummy> class controller {
@@ -305,12 +309,37 @@ template <class = class Dummy> class controller {
     void handle_trace_event(const EVENT_RECORD &record, const krabs::trace_context &trace_context) {
         utility::atomic_guard lk(lock);
 
+        bool before_was_not_loading_in = !user_sm.is(boost::sml::state<states::loading_in>);
+
         if (fc.should_handle_trace_event(record, trace_context)) {
             fc.mcc_sm_event_wrapper(*this, mcc_sm, record, trace_context);
             fc.user_sm_event_wrapper(*this, user_sm, game_id_sm, record, trace_context);
             handle_trace_event_impl<decltype(game_id_sm)>(game_id_sm, record, trace_context);
-        }
 
+            if (user_sm.is(boost::sml::state<states::loading_in>) && before_was_not_loading_in) {
+                should_id_map = true;
+            }
+
+            if (should_id_map) {
+                if (predicates::events::map_file_created(record, trace_context)) {
+                    krabs::schema schema(record, trace_context.schema_locator);
+                    krabs::parser parser(schema);
+                    std::wstring filename = parser.parse<std::wstring>(L"OpenPath");
+                    auto bytes = utility::ConvertWStringToBytes(filename);
+                    if (bytes.has_value()) {
+                        mi.map = bytes.value();
+                    }
+                    should_id_map = false;
+                }   
+            }
+
+            if (user_sm.is(boost::sml::state<states::in_menus>)) {
+                mi.map = "";
+            }
+        }
+    }
+    std::string get_map_info() const {
+        return mi.map;
     }
   private:
     template <typename _StateMachine>
@@ -359,6 +388,9 @@ template <class = class Dummy> class controller {
     boost::sml::sm<machines::mcc> mcc_sm;
     boost::sml::sm<machines::user> user_sm;
     boost::sml::sm<machines::game_id> game_id_sm;
+
+    details::map_info mi;
+    bool should_id_map = false;
 
   private: // filtering
     bool log_full = false;

@@ -15,6 +15,10 @@ class context {
   public:
     context(callback_table& cbtable) : sm_(cbtable) {}
 
+    std::string get_map_info() const {
+        return sm_.get_map_info();
+    }
+
     void start() {
         dispatch_thread_ = std::thread([&]{
             provider_.enable_dispatch_to(&sm_);

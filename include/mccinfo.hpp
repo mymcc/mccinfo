@@ -6,6 +6,7 @@
 #include "mccinfo/utility.hpp"
 #include "mccinfo/constants.hpp"
 #include "mccinfo/query.hpp"
+#include "mccinfo/file_readers.hpp"
 #include "mccinfo/fsm/provider.hpp"
 #include "mccinfo/fsm/controller.hpp"
 #include "mccinfo/fsm/context.hpp"

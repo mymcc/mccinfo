@@ -9,6 +9,7 @@
 #include <deque>
 #include <atomic>
 #include <chrono>
+#include <sstream>
 
 
 //#include <windows.h>

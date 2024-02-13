@@ -112,6 +112,12 @@ inline auto msstore_mcc      = krabs::predicates::property_is(L"ImageFileName", 
 inline auto mcc              = krabs::predicates::any_of({ &steam_mcc, &msstore_mcc});
 
 
+inline auto map_file = krabs::predicates::property_icontains(L"OpenPath", std::string(".map"));
+inline auto map_info_file = krabs::predicates::property_icontains(L"OpenPath", std::string(".mapinfo"));
+inline auto hdmu_map_file = krabs::predicates::property_icontains(L"OpenPath", std::string("hdmu.map"));
+inline auto shared_map_file = krabs::predicates::property_icontains(L"OpenPath", std::string("shared.map"));
+inline auto campaign_map_file = krabs::predicates::property_icontains(L"OpenPath", std::string("campaign.map"));
+inline auto mainmenu_map_file = krabs::predicates::property_icontains(L"OpenPath", std::string("mainmenu.map"));
 inline auto theater_file = krabs::predicates::property_icontains(L"OpenPath", std::string(".mov"));
 inline auto temp_carnage_report = krabs::predicates::property_icontains(L"OpenPath", std::string(".xml.tmp"));
 inline auto match_init_file     = krabs::predicates::property_icontains(L"OpenPath", std::string("init.txt"));
@@ -182,12 +188,41 @@ namespace contains {
     inline auto h4_movie_path = krabs::predicates::property_icontains(L"OpenPath", std::string("MCC\\Temporary\\UserContent\\Halo4\\Movie"));
     inline auto reach_movie_path = krabs::predicates::property_icontains(L"OpenPath", std::string("MCC\\Temporary\\UserContent\\HaloReach\\Movie"));
     inline auto ui_localization_path = krabs::predicates::property_icontains(L"OpenPath", std::string("data\\ui\\Localization"));
+    inline auto shared = krabs::predicates::property_icontains(L"OpenPath", std::string("shared"));
+    inline auto cache = krabs::predicates::property_icontains(L"OpenPath", std::string("cache"));
+    inline auto campaign = krabs::predicates::property_icontains(L"OpenPath", std::string("campaign"));
 }
 
 namespace certainly_not {
+
 inline krabs::predicates::none_of wininet_image({
     &likely_is::wininet_image,
 });
+
+inline krabs::predicates::none_of map_info_file({
+    &likely_is::map_info_file,
+});
+
+inline krabs::predicates::none_of shared_map_file({
+    &likely_is::shared_map_file,
+});
+
+inline krabs::predicates::none_of cache_map_file({
+    &contains::cache,
+});
+
+inline krabs::predicates::none_of campaign_map_file({
+    &likely_is::campaign_map_file,
+});
+
+inline krabs::predicates::none_of hdmu_map_file({
+    &likely_is::hdmu_map_file,
+});
+
+inline krabs::predicates::none_of mainmenu_map_file({
+    &likely_is::mainmenu_map_file,
+});
+
 } // certainly_not
 namespace events {
 
@@ -257,6 +292,17 @@ inline krabs::predicates::all_of in_menus_video_file_read({
 
 inline krabs::predicates::all_of main_menu_background_video_file_created({
     &likely_is::main_menu_background_video_file,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of map_file_created({
+    &likely_is::map_file,
+    &certainly_not::map_info_file,
+    &certainly_not::cache_map_file,
+    &certainly_not::shared_map_file,
+    &certainly_not::campaign_map_file,
+    &certainly_not::hdmu_map_file,
+    &certainly_not::mainmenu_map_file,
     &fio::file_create
 });
 
@@ -456,6 +502,8 @@ inline krabs::predicates::any_of file_create_targets({
     &likely_is::temp_carnage_report,
     &likely_is::soundstream_pck_file,
     &likely_is::sound_file,
+    &likely_is::map_file,
+    &likely_is::map_info_file,
     &likely_is::match_temp_file,
     &likely_is::halo3_autosave_bin_file,
     &likely_is::halo2a_autosave_temp_file,

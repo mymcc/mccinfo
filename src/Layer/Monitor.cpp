@@ -95,7 +95,41 @@ Monitor::Monitor() {
 }
 
 void Monitor::OnAttach() {
-    //m_IsAction = false;
+    auto file_xuid = 
+        mccinfo::file_readers::GetTheaterFileXUID(
+            "C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\Halo3\\copy\\autosave\\asq_constru_21A0C649.temp"
+        );
+
+    if (file_xuid.has_value()) {
+        theater_file_xuid << file_xuid.value();
+    }
+
+    auto file_timestamp = 
+        mccinfo::file_readers::GetTheaterFileTimestamp(
+            "C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\Halo3\\copy\\autosave\\asq_constru_21A0C649.temp"
+        );
+
+    if (file_timestamp.has_value()) {
+        theater_file_timestamp << file_timestamp.value();
+    }
+
+    auto gametype = 
+        mccinfo::file_readers::GetTheaterFileGameType(
+            "C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\Halo3\\copy\\autosave\\asq_constru_21A0C649.temp"
+    );
+
+    if (gametype.has_value()) {
+        theater_file_gametype << gametype.value();
+    }
+
+    auto file_desc = 
+        mccinfo::file_readers::GetTheaterFileGameDescription(
+            "C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\Halo3\\copy\\autosave\\asq_constru_21A0C649.temp"
+    );
+
+    if (file_desc.has_value()) {
+        theater_file_desc << file_desc.value();
+    }
 }
 
 void Monitor::OnUpdate(float ts) {
@@ -119,6 +153,21 @@ void Monitor::OnUIRender() {
     ImGui::Text("%s", user_state.c_str());
     ImGui::SameLine();
     ImGui::Text("(%s)", game_id_state.c_str());
+    ImGui::Text("Map:");        
+    ImGui::SameLine();
+    ImGui::Text("(%s)", context_->get_map_info().c_str());
+    ImGui::Text("Theater File XUID:");
+    ImGui::SameLine();
+    ImGui::Text("(%s)", theater_file_xuid.str().c_str());
+    ImGui::Text("Theater File Timestamp:");
+    ImGui::SameLine();
+    ImGui::Text("(%s) UTC", theater_file_timestamp.str().c_str());
+    ImGui::Text("Theater File Gametype:");
+    ImGui::SameLine();
+    ImGui::TextWrapped("(%s)", theater_file_gametype.str().c_str());
+    ImGui::Text("Theater File Desc:");
+    ImGui::SameLine();
+    ImGui::TextWrapped("(%s)", theater_file_desc.str().c_str());
     ImGui::End();
 
     DoStatusBar();
