@@ -94,42 +94,78 @@ Monitor::Monitor() {
     context_->start();
 }
 
+void Monitor::TestHalo3TheaterFileRead() {
+    // halo 3 - customs (good)
+    //std::wstring target = L"C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\Halo3\\copy\\autosave\\asq_constru_21A0C649.temp";
+    //std::wstring target = L"D:\\dev\\mcctt\\src\\Matches\\b4a9270c-bbdc-9d9e-e066-1df3d53a6590\\asq_bunkerw_2C4F3DF4.film";
+    //std::wstring target = L"D:\\dev\\mcctt\\src\\Matches\\a5d790d9-af4f-1f6d-2785-377c59b1021e\\asq_midship_6FA9062F.film";
+    //std::wstring target = L"C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\Halo3\\autosave\\asq_guardia_442F8E8F.temp";
+    
+    // we just need to use a lookup table to identify whether or not the map is campaign or firefight
+    //halo 3 odst - firefight (good)
+    std::wstring target = L"C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\UserContent\\Halo3ODST\\Movie\\asq_h100_E3C88E28_65CA916B.mov";
+    
+    //halo3 - campaign tsavo highway (good)
+    //std::wstring target = L"C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\UserContent\\Halo3\\Movie\\asq_030_out_6E66FA4F_65CBD633.mov";
+    mccinfo::file_readers::halo3_theater_file_reader reader;
+    auto file_data_query = reader.Read(target);
+    if (file_data_query.has_value()) {
+        file_data = file_data_query.value();
+        theater_file_timestamp << file_data.utc_timestamp_;
+    }
+}
+
+void Monitor::TestHaloReachTheaterFileRead() {
+    // halo reach - customs (good)
+    //std::wstring target = L"C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\UserContent\\HaloReach\\Movie\\asq_mglo-7_forge_hal_3EC4B5D4_65CC2B8A.mov";
+    
+    // halo reach - campaign long night of solace
+    //std::wstring target = L"C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\UserContent\\HaloReach\\Movie\\asq_campaign_m45_F613C570_65CC2CE0.mov";
+    
+    // halo reach - firefight
+    std::wstring target = L"C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\UserContent\\HaloReach\\Movie\\asq_survival_ff45_corv_8E296660_65CC2C77.mov";
+
+    mccinfo::file_readers::haloreach_theater_file_reader reader;
+    auto file_data_query = reader.Read(target);
+    if (file_data_query.has_value()) {
+        file_data = file_data_query.value();
+        theater_file_timestamp << file_data.utc_timestamp_;
+    }
+}
+
+void Monitor::TestHalo4TheaterFileRead() {
+    // halo 4 - customs (good)
+    std::wstring target = L"C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\UserContent\\Halo4\\Movie\\asq_mglo-1_ca_redoub_C8763617_65CC4085.mov";
+    // halo 4 - campaign (good)
+    //std::wstring target = L"C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\UserContent\\Halo4\\Movie\\asq_campaign_m80_delta_2798B799_65CC51E7.mov";
+    // halo 4 - spartan ops (good)
+    //std::wstring target = L"C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\UserContent\\Halo4\\Movie\\asq_firefight_ff87_chop_D5ACD677_65CA95EA.mov";
+
+    mccinfo::file_readers::halo4_theater_file_reader reader;
+    auto file_data_query = reader.Read(target);
+    if (file_data_query.has_value()) {
+        file_data = file_data_query.value();
+        theater_file_timestamp << file_data.utc_timestamp_;
+    }
+}
+
+void Monitor::TestHalo2ATheaterFileRead() {
+    // halo 2A - matchmaking
+    std::wstring target = L"C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\UserContent\\Halo2A\\Movie\\asq_mglo-2_ca_sanctu_50AA34A8_65CC5754.mov";
+
+    mccinfo::file_readers::halo2a_theater_file_reader reader;
+    auto file_data_query = reader.Read(target);
+    if (file_data_query.has_value()) {
+        file_data = file_data_query.value();
+        theater_file_timestamp << file_data.utc_timestamp_;
+    }
+}
+
 void Monitor::OnAttach() {
-    auto file_xuid = 
-        mccinfo::file_readers::GetTheaterFileXUID(
-            "C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\Halo3\\copy\\autosave\\asq_constru_21A0C649.temp"
-        );
-
-    if (file_xuid.has_value()) {
-        theater_file_xuid << file_xuid.value();
-    }
-
-    auto file_timestamp = 
-        mccinfo::file_readers::GetTheaterFileTimestamp(
-            "C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\Halo3\\copy\\autosave\\asq_constru_21A0C649.temp"
-        );
-
-    if (file_timestamp.has_value()) {
-        theater_file_timestamp << file_timestamp.value();
-    }
-
-    auto gametype = 
-        mccinfo::file_readers::GetTheaterFileGameType(
-            "C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\Halo3\\copy\\autosave\\asq_constru_21A0C649.temp"
-    );
-
-    if (gametype.has_value()) {
-        theater_file_gametype << gametype.value();
-    }
-
-    auto file_desc = 
-        mccinfo::file_readers::GetTheaterFileGameDescription(
-            "C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\Halo3\\copy\\autosave\\asq_constru_21A0C649.temp"
-    );
-
-    if (file_desc.has_value()) {
-        theater_file_desc << file_desc.value();
-    }
+    //TestHalo3TheaterFileRead();
+    //TestHaloReachTheaterFileRead();
+    //TestHalo4TheaterFileRead();
+    TestHalo2ATheaterFileRead();
 }
 
 void Monitor::OnUpdate(float ts) {
@@ -156,18 +192,26 @@ void Monitor::OnUIRender() {
     ImGui::Text("Map:");        
     ImGui::SameLine();
     ImGui::Text("(%s)", context_->get_map_info().c_str());
+    ImGui::Text("Theater File Author:");
+    ImGui::SameLine();
+    ImGui::Text("(%s)", file_data.author_.c_str());
     ImGui::Text("Theater File XUID:");
     ImGui::SameLine();
-    ImGui::Text("(%s)", theater_file_xuid.str().c_str());
+    ImGui::Text("(%s)", file_data.author_xuid_.c_str());
     ImGui::Text("Theater File Timestamp:");
     ImGui::SameLine();
     ImGui::Text("(%s) UTC", theater_file_timestamp.str().c_str());
     ImGui::Text("Theater File Gametype:");
     ImGui::SameLine();
-    ImGui::TextWrapped("(%s)", theater_file_gametype.str().c_str());
+    ImGui::TextWrapped("(%s)", file_data.gametype_.c_str());
     ImGui::Text("Theater File Desc:");
     ImGui::SameLine();
-    ImGui::TextWrapped("(%s)", theater_file_desc.str().c_str());
+    ImGui::TextWrapped("(%s)", file_data.desc_.c_str());
+
+    ImGui::Text("Players (%i):", file_data.player_set_.size());
+    for (const auto &p : file_data.player_set_) {
+        ImGui::Text("\t%s (%i)", p.c_str(), p.size());
+    }
     ImGui::End();
 
     DoStatusBar();
