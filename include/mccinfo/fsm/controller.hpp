@@ -172,6 +172,54 @@ inline void print_trace_event(std::wostringstream& woss, const EVENT_RECORD &rec
     }
 }
 
+
+mccinfo::file_readers::theater_file_data ReadTheaterFile(const std::filesystem::path &theater_file,
+                     mccinfo::file_readers::game_hint hint) {
+    //theater_file_timestamp.str("");
+    mccinfo::file_readers::theater_file_data file_data;
+    switch (hint) {
+    case mccinfo::file_readers::game_hint::HALO2A: {
+        mccinfo::file_readers::halo2a_theater_file_reader reader;
+        auto file_data_query = reader.Read(theater_file);
+        if (file_data_query.has_value()) {
+            file_data = file_data_query.value();
+            //theater_file_timestamp << file_data.utc_timestamp_;
+        }
+        break;
+    }
+    case mccinfo::file_readers::game_hint::HALO3: {
+        mccinfo::file_readers::halo3_theater_file_reader reader;
+        auto file_data_query = reader.Read(theater_file);
+        if (file_data_query.has_value()) {
+            file_data = file_data_query.value();
+            //theater_file_timestamp << file_data.utc_timestamp_;
+        }
+        break;
+    }
+    case mccinfo::file_readers::game_hint::HALOREACH: {
+        mccinfo::file_readers::haloreach_theater_file_reader reader;
+        auto file_data_query = reader.Read(theater_file);
+        if (file_data_query.has_value()) {
+            file_data = file_data_query.value();
+            //theater_file_timestamp << file_data.utc_timestamp_;
+        }
+        break;
+    }
+    case mccinfo::file_readers::game_hint::HALO4: {
+        mccinfo::file_readers::halo4_theater_file_reader reader;
+        auto file_data_query = reader.Read(theater_file);
+        if (file_data_query.has_value()) {
+            file_data = file_data_query.value();
+            //theater_file_timestamp << file_data.utc_timestamp_;
+        }
+        break;
+    }
+    default:
+        break;
+    }
+
+    return file_data;
+}
 namespace details {
 
 class filtering_context {
@@ -341,6 +389,9 @@ template <class = class Dummy> class controller {
     std::string get_map_info() const {
         return mi.map;
     }
+    mccinfo::file_readers::theater_file_data get_theater_file_data() const {
+        return file_data;
+    }
   private:
     template <typename _StateMachine>
     void handle_trace_event_impl(_StateMachine &sm, const EVENT_RECORD &record,
@@ -388,7 +439,7 @@ template <class = class Dummy> class controller {
     boost::sml::sm<machines::mcc> mcc_sm;
     boost::sml::sm<machines::user> user_sm;
     boost::sml::sm<machines::game_id> game_id_sm;
-
+    mccinfo::file_readers::theater_file_data file_data;
     details::map_info mi;
     bool should_id_map = false;
 

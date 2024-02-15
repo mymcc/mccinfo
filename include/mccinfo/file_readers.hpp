@@ -43,12 +43,14 @@ enum class game_hint{
     HALOREACH
 };
 
+using player_info = std::pair<int, std::string>;
+
 struct theater_file_data {
     std::string gametype_;
     std::string desc_;
     std::string author_xuid_;
     std::string author_;
-    std::set<std::string> player_set_;
+    std::set<player_info> player_set_;
     std::filesystem::file_time_type utc_timestamp_;
 };
 
@@ -82,7 +84,7 @@ class theater_file_reader {
     virtual std::optional<std::string> ReadTheaterFileAuthor(std::ifstream &ifs) = 0;
     virtual std::optional<std::filesystem::file_time_type> ReadTheaterFileUTCTimestamp(
         std::ifstream &ifs) = 0;
-    virtual std::optional<std::set<std::string>> ReadTheaterFilePlayerSet(std::ifstream &ifs) = 0;
+    virtual std::optional<std::set<player_info>> ReadTheaterFilePlayerSet(std::ifstream &ifs) = 0;
 };
 
 class halo3_theater_file_reader : public theater_file_reader {
@@ -270,7 +272,7 @@ class halo3_theater_file_reader : public theater_file_reader {
 
         return std::chrono::file_clock::from_utc(utc);
     }
-    virtual std::optional<std::set<std::string>> ReadTheaterFilePlayerSet(
+    virtual std::optional<std::set<player_info>> ReadTheaterFilePlayerSet(
         std::ifstream &ifs) override final {
         static const unsigned long long head_offset = 0x000001D8;
 
@@ -306,7 +308,7 @@ class halo3_theater_file_reader : public theater_file_reader {
             }
         }
 
-        std::set<std::string> player_set;
+        std::set<player_info> player_set;
 
         while (true) {
             // look at current byte, no more players if \0
@@ -326,10 +328,23 @@ class halo3_theater_file_reader : public theater_file_reader {
 
             std::wstring wstr(reinterpret_cast<const wchar_t *>(buffer.data()));
 
+            bool success = false;
             auto bytes = utility::ConvertWStringToBytes(wstr);
             if (bytes.has_value()) {
-                player_set.insert(bytes.value());
+                
+                success = true;
             }
+
+            char team_buf[1];
+            ifs.seekg(120, std::ios_base::cur);
+            ifs.read(&team_buf[0], 1);
+            ifs.seekg(-1, std::ios_base::cur);
+            ifs.seekg(-120, std::ios_base::cur);
+
+            if (success) {
+                player_set.insert({team_buf[0], bytes.value()});
+            }
+
 
             // skip to next player
             ifs.seekg(184 - 32, std::ios_base::cur);
@@ -358,7 +373,7 @@ class haloreach_theater_file_reader : public theater_file_reader {
         auto author = this->ReadTheaterFileAuthor(ifs);
         if (author.has_value()) {
             file_data.author_ = author.value();
-            file_data.player_set_.insert(file_data.author_);
+            file_data.player_set_.insert({-1, file_data.author_});
         }
 
         auto xuid = this->ReadTheaterFileAuthorXUID(ifs);
@@ -534,7 +549,7 @@ class haloreach_theater_file_reader : public theater_file_reader {
         return std::chrono::file_clock::from_utc(utc);
 
     }
-    virtual std::optional<std::set<std::string>> ReadTheaterFilePlayerSet(
+    virtual std::optional<std::set<player_info>> ReadTheaterFilePlayerSet(
         std::ifstream &ifs) override final {
 
         
@@ -543,7 +558,7 @@ class haloreach_theater_file_reader : public theater_file_reader {
         ifs.seekg(0);
         ifs.seekg(head_offset);
 
-        std::set<std::string> player_set;
+        std::set<player_info> player_set;
 
         int empty_region_count = 0;
         while (true) {
@@ -572,11 +587,23 @@ class haloreach_theater_file_reader : public theater_file_reader {
                 ifs.read(&buffer.data()[0], 32);
 
                 std::wstring wstr(reinterpret_cast<const wchar_t *>(buffer.data()));
-
+                
+                bool success = false;
                 auto bytes = utility::ConvertWStringToBytes(wstr);
                 if (bytes.has_value()) {
-                    player_set.insert(bytes.value());
+                    
+                    success = true;
                 }
+                char team_buf[1];
+                ifs.seekg(88, std::ios_base::cur);
+                ifs.read(&team_buf[0], 1);
+                ifs.seekg(-1, std::ios_base::cur);
+                ifs.seekg(-88, std::ios_base::cur);
+
+                if (success) {
+                    player_set.insert({team_buf[0], bytes.value()});
+                }
+
                 ifs.seekg(160 - 32, std::ios_base::cur);
             } else {
                 ifs.seekg(160, std::ios_base::cur);
@@ -614,7 +641,7 @@ class halo4_theater_file_reader : public theater_file_reader {
         auto author = this->ReadTheaterFileAuthor(ifs);
         if (author.has_value()) {
             file_data.author_ = author.value();
-            file_data.player_set_.insert(file_data.author_);
+            file_data.player_set_.insert({-1, file_data.author_});
         }
 
         auto xuid = this->ReadTheaterFileAuthorXUID(ifs);
@@ -790,7 +817,7 @@ class halo4_theater_file_reader : public theater_file_reader {
         return std::chrono::file_clock::from_utc(utc);
     }
 
-    virtual std::optional<std::set<std::string>> ReadTheaterFilePlayerSet(
+    virtual std::optional<std::set<player_info>> ReadTheaterFilePlayerSet(
         std::ifstream &ifs) override final {
 
         static const unsigned long long head_offset = 0x0002C3C0;
@@ -798,7 +825,7 @@ class halo4_theater_file_reader : public theater_file_reader {
         ifs.seekg(0);
         ifs.seekg(head_offset);
 
-        std::set<std::string> player_set;
+        std::set<player_info> player_set;
 
         int empty_region_count = 0;
         while (player_set.size() < 16) {
@@ -827,11 +854,23 @@ class halo4_theater_file_reader : public theater_file_reader {
 
                 std::wstring wstr(reinterpret_cast<const wchar_t *>(buffer.data()));
 
+                bool success = false;
                 auto bytes = utility::ConvertWStringToBytes(wstr);
                 if (bytes.has_value()) {
-                    player_set.insert(bytes.value());
+                    success = true;
                 }
-                ifs.seekg(328 - 32, std::ios_base::cur);
+                char team_buf[1];
+                // go to team
+                ifs.seekg(328 - 72, std::ios_base::cur);
+                ifs.read(&team_buf[0], 1);
+
+                if (success) {
+                    player_set.insert({team_buf[0], bytes.value()});
+                }
+
+                ifs.seekg(-1, std::ios_base::cur);
+                ifs.seekg(40, std::ios_base::cur);
+
             } else {
                 ifs.seekg(328, std::ios_base::cur);
             }
@@ -863,7 +902,7 @@ class halo2a_theater_file_reader : public theater_file_reader {
         auto author = this->ReadTheaterFileAuthor(ifs);
         if (author.has_value()) {
             file_data.author_ = author.value();
-            file_data.player_set_.insert(file_data.author_);
+            file_data.player_set_.insert({-1, file_data.author_});
         }
 
         auto xuid = this->ReadTheaterFileAuthorXUID(ifs);
@@ -883,7 +922,7 @@ class halo2a_theater_file_reader : public theater_file_reader {
         }
         /*
         */
-
+        //can get 
         ifs.close();
         return file_data;
         // if GameType == "", then Discern if its campaign or firefight
@@ -1040,7 +1079,7 @@ class halo2a_theater_file_reader : public theater_file_reader {
         return std::chrono::file_clock::from_utc(utc);
     }
 
-    virtual std::optional<std::set<std::string>> ReadTheaterFilePlayerSet(
+    virtual std::optional<std::set<player_info>> ReadTheaterFilePlayerSet(
         std::ifstream &ifs) override final {
 
         static const unsigned long long head_offset = 0x0002C3C0;
@@ -1048,7 +1087,7 @@ class halo2a_theater_file_reader : public theater_file_reader {
         ifs.seekg(0);
         ifs.seekg(head_offset);
 
-        std::set<std::string> player_set;
+        std::set<player_info> player_set;
 
         int empty_region_count = 0;
         while (player_set.size() < 16) {
@@ -1077,11 +1116,24 @@ class halo2a_theater_file_reader : public theater_file_reader {
 
                 std::wstring wstr(reinterpret_cast<const wchar_t *>(buffer.data()));
 
+                bool success = false;
                 auto bytes = utility::ConvertWStringToBytes(wstr);
                 if (bytes.has_value()) {
-                    player_set.insert(bytes.value());
+                    success = true;
                 }
-                ifs.seekg(328 - 32, std::ios_base::cur);
+                char team_buf[1];
+                // go to team
+                ifs.seekg(328 - 72, std::ios_base::cur);
+                ifs.read(&team_buf[0], 1);
+
+                if (success) {
+                    player_set.insert({team_buf[0], bytes.value()});
+                }
+
+                ifs.seekg(-1, std::ios_base::cur);
+                ifs.seekg(40, std::ios_base::cur);
+
+
             } else {
                 ifs.seekg(328, std::ios_base::cur);
             }

@@ -19,6 +19,10 @@ class context {
         return sm_.get_map_info();
     }
 
+    mccinfo::file_readers::theater_file_data get_theater_file_data() const {
+        sm_.get_theater_file_data();
+    }
+
     void start() {
         dispatch_thread_ = std::thread([&]{
             provider_.enable_dispatch_to(&sm_);

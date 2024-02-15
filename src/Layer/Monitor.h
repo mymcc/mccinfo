@@ -13,10 +13,10 @@ public:
 private:
   void DoMainMenuBar(void);
   void DoStatusBar(void);
-  void TestHalo3TheaterFileRead(void);
-  void TestHaloReachTheaterFileRead(void);
-  void TestHalo4TheaterFileRead(void);
-  void TestHalo2ATheaterFileRead(void);
+
+  void ReadTheaterFile(const std::filesystem::path &theater_file, mccinfo::file_readers::game_hint hint);
+  void DoTheaterFileConfig(void);
+  void DoTheaterFileInfo(void);
 
 private:
 	bool show_demo = false;
@@ -26,6 +26,7 @@ private:
     std::string game_id_state;
     std::ostringstream theater_file_timestamp;
     mccinfo::file_readers::theater_file_data file_data;
+    mccinfo::file_readers::game_hint hint;
     mccinfo::fsm::callback_table cb_table_{};
     std::unique_ptr<mccinfo::fsm::context> context_;
 };
