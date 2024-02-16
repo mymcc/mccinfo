@@ -92,6 +92,7 @@ Monitor::Monitor() {
     context_ = std::make_unique<context>(cb_table_);
 
     context_->start();
+
 }
 
 uint32_t GetColorFromTeam(int team, mccinfo::file_readers::game_hint hint) {
@@ -145,133 +146,52 @@ uint32_t GetColorFromTeam(int team, mccinfo::file_readers::game_hint hint) {
     }
 }
 
-void Monitor::ReadTheaterFile(const std::filesystem::path &theater_file,
-                     mccinfo::file_readers::game_hint hint) {
-    theater_file_timestamp.str("");
-    switch (hint) { 
-    case mccinfo::file_readers::game_hint::HALO2A: {
-        mccinfo::file_readers::halo2a_theater_file_reader reader;
-        auto file_data_query = reader.Read(theater_file);
-        if (file_data_query.has_value()) {
-            file_data = file_data_query.value();
-            theater_file_timestamp << file_data.utc_timestamp_;
-        }
-        break;
-    }
-    case mccinfo::file_readers::game_hint::HALO3: {
-        mccinfo::file_readers::halo3_theater_file_reader reader;
-        auto file_data_query = reader.Read(theater_file);
-        if (file_data_query.has_value()) {
-            file_data = file_data_query.value();
-            theater_file_timestamp << file_data.utc_timestamp_;
-        }
-        break;
-    }
-    case mccinfo::file_readers::game_hint::HALOREACH: {
-        mccinfo::file_readers::haloreach_theater_file_reader reader;
-        auto file_data_query = reader.Read(theater_file);
-        if (file_data_query.has_value()) {
-            file_data = file_data_query.value();
-            theater_file_timestamp << file_data.utc_timestamp_;
-        }
-        break;
-    }
-    case mccinfo::file_readers::game_hint::HALO4: {
-        mccinfo::file_readers::halo4_theater_file_reader reader;
-        auto file_data_query = reader.Read(theater_file);
-        if (file_data_query.has_value()) {
-            file_data = file_data_query.value();
-            theater_file_timestamp << file_data.utc_timestamp_;
-        }
-        break;
-    }
-    default:
-        break;
-    }
-
-}
-void Monitor::DoTheaterFileConfig(void) {
-
-    static std::vector<char> buf(256);
-
-    ImGui::InputText("Theater File: ", buf.data(), buf.size());
-
-
-    // combo
-    const char *items[] = { "HALO2A", "HALO3", "HALO REACH", "HALO4" };
-    static const char *current_item = "HALO2A";
-
-    ImGui::SetNextItemWidth(100);
-    if (ImGui::BeginCombo("##combo", current_item)) // The second parameter is the label previewed before opening the combo.
-    {
-        for (int n = 0; n < IM_ARRAYSIZE(items); n++)
-        {
-            bool is_selected = (current_item == items[n]); // You can store your selection however you want, outside or inside your objects
-            if (ImGui::Selectable(items[n], is_selected))
-                current_item = items[n];
-            if (is_selected)
-                ImGui::SetItemDefaultFocus();   // You may set the initial focus when opening the combo (scrolling + for keyboard navigation support)
-        }
-        ImGui::EndCombo();
-    }
-
-    ImGui::SameLine();
-
-    if (ImGui::Button("Parse")) {
-        if (current_item == "HALO2A")
-            hint = mccinfo::file_readers::game_hint::HALO2A;
-        else if (current_item == "HALO3")
-            hint = mccinfo::file_readers::game_hint::HALO3;
-        else if (current_item == "HALO REACH")
-            hint = mccinfo::file_readers::game_hint::HALOREACH;
-        else if (current_item == "HALO4")
-            hint = mccinfo::file_readers::game_hint::HALO4;
-
-        ReadTheaterFile(reinterpret_cast<const char *>(buf.data()), hint);
-    }
-}
-
 void Monitor::DoTheaterFileInfo() {
-    ImGui::Text("Theater File Author:");
-    ImGui::SameLine();
-    ImGui::Text("(%s)", file_data.author_.c_str());
-    ImGui::Text("Theater File XUID:");
-    ImGui::SameLine();
-    ImGui::Text("(%s)", file_data.author_xuid_.c_str());
-    ImGui::Text("Theater File Timestamp:");
-    ImGui::SameLine();
-    ImGui::Text("(%s) UTC", theater_file_timestamp.str().c_str());
-    ImGui::Text("Theater File Gametype:");
-    ImGui::SameLine();
-    ImGui::TextWrapped("(%s)", file_data.gametype_.c_str());
-    ImGui::Text("Theater File Desc:");
-    ImGui::SameLine();
-    ImGui::TextWrapped("(%s)", file_data.desc_.c_str());
 
-    ImGui::BeginTable("split", 1, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_Resizable);
-    ImGui::TableSetupColumn("Players");
-    ImGui::TableHeadersRow();
+    auto emi = context_->get_extended_match_info();
+    if (emi.theater_file_data_.has_value()) {
+        auto file_data = emi.theater_file_data_.value();
+        ImGui::Text("Theater File Author:");
+        ImGui::SameLine();
+        ImGui::Text("(%s)", file_data.author_.c_str());
+        ImGui::Text("Theater File XUID:");
+        ImGui::SameLine();
+        ImGui::Text("(%s)", file_data.author_xuid_.c_str());
+        //ImGui::Text("Theater File Timestamp:");
+        //ImGui::SameLine();
+        //ImGui::Text("(%s) UTC", file_data.utc_timestamp_.c_str());
+        ImGui::Text("Theater File Gametype:");
+        ImGui::SameLine();
+        ImGui::TextWrapped("(%s)", file_data.gametype_.c_str());
+        ImGui::Text("Theater File Desc:");
+        ImGui::SameLine();
+        ImGui::TextWrapped("(%s)", file_data.desc_.c_str());
 
-    int i = 0;
-    for (const auto &p : file_data.player_set_)
-    {
-        ImGui::TableNextRow();
-        uint32_t col = GetColorFromTeam(p.first, hint);
+        ImGui::BeginTable("split", 1, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_Resizable);
+        ImGui::TableSetupColumn("Players");
+        ImGui::TableHeadersRow();
 
-        ImColor imcol = ImColor(
-            (int)((col & 0xFF000000) >> 24), 
-            (int)((col & 0x00FF0000) >> 16), 
-            (int)((col & 0x0000FF00) >> 8),
-            (int)((col & 0x000000FF))
-        );
+        int i = 0;
+        for (const auto &p : file_data.player_set_)
+        {
+            ImGui::TableNextRow();
+            uint32_t col = GetColorFromTeam(p.first, hint);
 
-        ImU32 row_bg_color = ImU32(imcol);
-        ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, row_bg_color);
-        ImGui::TableSetColumnIndex(0);
-        ImGui::Text("%s", p.second.c_str());
-        ++i;
+            ImColor imcol = ImColor(
+                (int)((col & 0xFF000000) >> 24), 
+                (int)((col & 0x00FF0000) >> 16), 
+                (int)((col & 0x0000FF00) >> 8),
+                (int)((col & 0x000000FF))
+            );
+
+            ImU32 row_bg_color = ImU32(imcol);
+            ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, row_bg_color);
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Text("%s", p.second.c_str());
+            ++i;
+        }
+        ImGui::EndTable();
     }
-    ImGui::EndTable();
 }
 
 void Monitor::OnAttach() {
@@ -303,8 +223,6 @@ void Monitor::OnUIRender() {
     ImGui::SameLine();
     ImGui::Text("(%s)", context_->get_map_info().c_str());
 
-    DoTheaterFileConfig();
-    
     DoTheaterFileInfo();
 
     ImGui::End();

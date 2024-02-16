@@ -23,6 +23,10 @@ class context {
         sm_.get_theater_file_data();
     }
 
+    const extended_match_info &get_extended_match_info() const {
+        return sm_.get_extended_match_info();
+    }
+
     void start() {
         dispatch_thread_ = std::thread([&]{
             provider_.enable_dispatch_to(&sm_);

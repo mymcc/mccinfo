@@ -36,6 +36,8 @@ inline unsigned int GetSystemAccountedLeapSeconds(void) {
 }
 
 enum class game_hint{
+    HALO1,
+    HALO2,
     HALO2A,
     HALO3,
     HALO3ODST,
@@ -309,45 +311,59 @@ class halo3_theater_file_reader : public theater_file_reader {
         }
 
         std::set<player_info> player_set;
-
+        int empty_region_count = 0;
         while (true) {
             // look at current byte, no more players if \0
+
+            bool current_is_empty_region = true;
             char buf[1];
             ifs.read(&buf[0], 1);
             if (buf[0] == '\0')
-                break;
+            {
+                ++empty_region_count;
+                if (empty_region_count >= 2) {
+                    break;
+                }
+            } else {
+                empty_region_count = 0;
+                current_is_empty_region = false;
+            }
 
             // reset
             ifs.seekg(-1, std::ios_base::cur);
+            if (!current_is_empty_region) {
+                // read player name
+                std::vector<char> buffer;
+                buffer.resize(32);
 
-            // read player name
-            std::vector<char> buffer;
-            buffer.resize(32);
+                ifs.read(&buffer.data()[0], 32);
 
-            ifs.read(&buffer.data()[0], 32);
+                std::wstring wstr(reinterpret_cast<const wchar_t *>(buffer.data()));
 
-            std::wstring wstr(reinterpret_cast<const wchar_t *>(buffer.data()));
-
-            bool success = false;
-            auto bytes = utility::ConvertWStringToBytes(wstr);
-            if (bytes.has_value()) {
+                bool success = false;
+                auto bytes = utility::ConvertWStringToBytes(wstr);
+                if (bytes.has_value()) {
                 
-                success = true;
+                    success = true;
+                }
+
+                char team_buf[1];
+                ifs.seekg(120, std::ios_base::cur);
+                ifs.read(&team_buf[0], 1);
+                ifs.seekg(-1, std::ios_base::cur);
+                ifs.seekg(-120, std::ios_base::cur);
+
+                if (success) {
+                    player_set.insert({team_buf[0], bytes.value()});
+                }
+
+
+                // skip to next player
+                ifs.seekg(184 - 32, std::ios_base::cur);
+            } else 
+            {
+                ifs.seekg(184, std::ios_base::cur);
             }
-
-            char team_buf[1];
-            ifs.seekg(120, std::ios_base::cur);
-            ifs.read(&team_buf[0], 1);
-            ifs.seekg(-1, std::ios_base::cur);
-            ifs.seekg(-120, std::ios_base::cur);
-
-            if (success) {
-                player_set.insert({team_buf[0], bytes.value()});
-            }
-
-
-            // skip to next player
-            ifs.seekg(184 - 32, std::ios_base::cur);
         }
 
         return player_set;

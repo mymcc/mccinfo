@@ -6,6 +6,7 @@
 #define MCCFSM_STATIC \
     static constexpr auto
 
+#include "mccinfo/fsm/autosave_client.hpp"
 #include "mccinfo/fsm/machines/mcc.hpp"
 #include "mccinfo/fsm/machines/user.hpp"
 #include "mccinfo/fsm/machines/game_id.hpp"
@@ -173,7 +174,7 @@ inline void print_trace_event(std::wostringstream& woss, const EVENT_RECORD &rec
 }
 
 
-mccinfo::file_readers::theater_file_data ReadTheaterFile(const std::filesystem::path &theater_file,
+inline mccinfo::file_readers::theater_file_data ReadTheaterFile(const std::filesystem::path &theater_file,
                      mccinfo::file_readers::game_hint hint) {
     //theater_file_timestamp.str("");
     mccinfo::file_readers::theater_file_data file_data;
@@ -342,7 +343,13 @@ struct map_info {
     std::string map;
 };
 
+
 }
+
+struct extended_match_info {
+    std::optional<std::filesystem::path> base_map_;
+    std::optional<mccinfo::file_readers::theater_file_data> theater_file_data_;
+};
 
 template <class = class Dummy> class controller {
     friend class details::filtering_context;
@@ -351,13 +358,22 @@ template <class = class Dummy> class controller {
     controller(callback_table& cbtable)
         : mcc_sm{cbtable},
         user_sm{cbtable},
-        game_id_sm{cbtable}
-    {};
+        game_id_sm{cbtable}, 
+        autosave_client_("", "", "HoboCopy.exe")
+    {
+        autosave_client_.set_on_copy_start([&](const std::filesystem::path &path) {
+            system((std::string("rmdir /s /q") + path.generic_string()).c_str());
+        });
+
+        autosave_client_.set_copy_dst(".\\mccinfo_cache\\autosave");
+        autosave_client_.start();
+    };
 
     void handle_trace_event(const EVENT_RECORD &record, const krabs::trace_context &trace_context) {
         utility::atomic_guard lk(lock);
 
         bool before_was_not_loading_in = !user_sm.is(boost::sml::state<states::loading_in>);
+        bool before_was_not_in_game = !user_sm.is(boost::sml::state<states::in_game>);
 
         if (fc.should_handle_trace_event(record, trace_context)) {
             fc.mcc_sm_event_wrapper(*this, mcc_sm, record, trace_context);
@@ -369,6 +385,7 @@ template <class = class Dummy> class controller {
             }
 
             if (should_id_map) {
+                // make predicate event more clear (specific map pred)
                 if (predicates::events::map_file_created(record, trace_context)) {
                     krabs::schema schema(record, trace_context.schema_locator);
                     krabs::parser parser(schema);
@@ -376,6 +393,7 @@ template <class = class Dummy> class controller {
                     auto bytes = utility::ConvertWStringToBytes(filename);
                     if (bytes.has_value()) {
                         mi.map = bytes.value();
+                        emi_.base_map_ = bytes.value();
                     }
                     should_id_map = false;
                 }   
@@ -383,7 +401,78 @@ template <class = class Dummy> class controller {
 
             if (user_sm.is(boost::sml::state<states::in_menus>)) {
                 mi.map = "";
+                emi_.base_map_ = std::nullopt;
+                emi_.theater_file_data_ = std::nullopt;
             }
+
+            if (user_sm.is(boost::sml::state<states::in_game>) && before_was_not_in_game) {
+                should_save_autosave = true;
+            }
+
+            if (should_save_autosave) {
+                std::string temp = "C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\";
+                mccinfo::file_readers::game_hint hint = mccinfo::file_readers::game_hint::HALO3;
+
+                assert(!game_id_sm.is(boost::sml::state<states::none>));
+
+                if (game_id_sm.is(boost::sml::state<states::haloce>)) {
+                    temp += "Halo1";
+                    hint = mccinfo::file_readers::game_hint::HALO1;
+                } else if (game_id_sm.is(boost::sml::state<states::halo2>)) {
+                    temp += "Halo2";
+                    hint = mccinfo::file_readers::game_hint::HALO2;
+
+                } else if (game_id_sm.is(boost::sml::state<states::halo3>)) {
+                    temp += "Halo3";
+                    hint = mccinfo::file_readers::game_hint::HALO3;
+                } else if (game_id_sm.is(boost::sml::state<states::halo3odst>)) {
+                    temp += "Halo3ODST";
+                    hint = mccinfo::file_readers::game_hint::HALO3;
+
+                } else if (game_id_sm.is(boost::sml::state<states::haloreach>)) {
+                    temp += "HaloReach";
+                    hint = mccinfo::file_readers::game_hint::HALOREACH;
+                } else if (game_id_sm.is(boost::sml::state<states::halo4>)) {
+                    temp += "Halo4";
+                    hint = mccinfo::file_readers::game_hint::HALO4;
+
+                } else if (game_id_sm.is(boost::sml::state<states::halo2a>)) {
+                    temp += "Halo2A";
+                    hint = mccinfo::file_readers::game_hint::HALO2A;
+                }
+
+                temp += "\\autosave";
+
+                autosave_client_.set_copy_src(temp);
+
+                autosave_client_.set_on_complete([this, hint](const std::filesystem::path &path) {
+                    mccinfo::file_readers::game_hint hint_ = hint;
+                    if (std::filesystem::exists(path) && std::filesystem::is_directory(path)) {
+                        for (const auto &entry : std::filesystem::directory_iterator(path)) {
+                            const auto &path2 = entry.path();
+                            
+                            if (std::filesystem::is_regular_file(path2)) {
+                                if ((path2.extension().generic_string() == ".temp") ||
+                                    (path2.extension().generic_string() == ".film")) {
+                                    //MessageBox(NULL, path2.generic_wstring().c_str(), L"", MB_OK);
+                                    this->emi_.theater_file_data_ = ReadTheaterFile(std::filesystem::canonical(path2), hint_);
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // 5 second delay should be sufficient for h2a/h4
+                if ((hint == mccinfo::file_readers::game_hint::HALO2A) ||
+                    (hint == mccinfo::file_readers::game_hint::HALO4)) {
+                    autosave_client_.request_copy(5000);
+                }
+                autosave_client_.request_copy(0);
+                should_save_autosave = false;
+            }
+
+
+
         }
     }
     std::string get_map_info() const {
@@ -392,6 +481,11 @@ template <class = class Dummy> class controller {
     mccinfo::file_readers::theater_file_data get_theater_file_data() const {
         return file_data;
     }
+
+    const extended_match_info& get_extended_match_info() const {
+        return emi_;
+    }
+    
   private:
     template <typename _StateMachine>
     void handle_trace_event_impl(_StateMachine &sm, const EVENT_RECORD &record,
@@ -440,8 +534,13 @@ template <class = class Dummy> class controller {
     boost::sml::sm<machines::user> user_sm;
     boost::sml::sm<machines::game_id> game_id_sm;
     mccinfo::file_readers::theater_file_data file_data;
+    mccinfo::fsm::autosave_client autosave_client_;
+
+    extended_match_info emi_;
+
     details::map_info mi;
     bool should_id_map = false;
+    bool should_save_autosave = false;
 
   private: // filtering
     bool log_full = false;
