@@ -1,5 +1,7 @@
 # mccinfo
 
+![image](https://github.com/mymcc/mccinfo/assets/67705843/7ef19bad-d3e0-47a0-89d3-33755b540d50)
+
 mccinfo is a C++20 helper library to accomplish providing information covering installation, versioning, and both static and runtime information regarding Halo: The Master Chief Collection&trade;
 
 ## Install and Build
@@ -21,3 +23,4 @@ Documentation can be generated with:
 ```bash
  .\scripts\generate_docs.bat
 ```
+
