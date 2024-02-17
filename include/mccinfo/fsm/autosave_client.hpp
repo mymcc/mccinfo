@@ -30,7 +30,9 @@ public:
         pre_callback_ = pre_callback;
     }
 
-    void set_on_complete(std::function<void(const std::filesystem::path &)> post_callback) {
+    void set_on_complete(
+        std::function<void(const std::filesystem::path &, const std::filesystem::path &)>
+            post_callback) {
         std::unique_lock<std::mutex> lock(mut_);
         post_callback_ = post_callback;
     }
@@ -60,8 +62,10 @@ public:
 
                 bool success = do_copy();
 
+
+
                 if (success && post_callback_) {
-                    post_callback_(dst_);
+                    post_callback_(src_, dst_);
                 } 
 
                 else if (error_callback_){
@@ -97,10 +101,10 @@ private:
         ZeroMemory(&pi, sizeof(pi));
 
         wchar_t args[1024];
-        wsprintf(args, L"%s %s %s",
+        wsprintf(args, L"%s -r -o %s -f %s",
             host_.generic_wstring().c_str(),
-            src_.generic_wstring().c_str(),
-            dst_.generic_wstring().c_str());
+            dst_.generic_wstring().c_str(),
+            src_.generic_wstring().c_str());
 
         if (CreateProcessW(host_.generic_wstring().c_str(), args, NULL, NULL, FALSE,
                            CREATE_NO_WINDOW, NULL,
@@ -121,7 +125,7 @@ private:
     std::filesystem::path dst_;
     std::filesystem::path host_;
     std::function<void(const std::filesystem::path &)> pre_callback_;
-    std::function<void(const std::filesystem::path &)> post_callback_;
+    std::function<void(const std::filesystem::path &, const std::filesystem::path &)> post_callback_;
     std::function<void(DWORD)> error_callback_;
 
   private:

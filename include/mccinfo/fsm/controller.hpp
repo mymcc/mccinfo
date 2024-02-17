@@ -20,6 +20,74 @@ namespace mccinfo {
 namespace fsm {
 
 
+inline void FlattenDirectory(const std::wstring &rootPath,
+                             const std::wstring &targetRootPath) {
+    WIN32_FIND_DATA findFileData;
+    HANDLE hFind = INVALID_HANDLE_VALUE;
+
+    // Prepare the search pattern
+    std::wstring searchPath = std::filesystem::canonical(std::filesystem::path(rootPath)).generic_wstring() + L"\\*";
+
+    // Find the first file in the directory.
+    hFind = FindFirstFile(searchPath.c_str(), &findFileData);
+    //MessageBox(NULL, searchPath.c_str(), rootPath.c_str(), MB_OK);
+    if (hFind == INVALID_HANDLE_VALUE) {
+        //MessageBox(NULL, searchPath.c_str(), rootPath.c_str(), MB_OK);
+        std::wcerr << L"FindFirstFile failed for " << rootPath << L" with error " << GetLastError()
+                   << std::endl;
+        return;
+    }
+
+    do {
+        // Skip '.' and '..' directories
+        if (wcscmp(findFileData.cFileName, L".") == 0 ||
+            wcscmp(findFileData.cFileName, L"..") == 0) {
+            continue;
+        }
+
+        std::wstring filePath = rootPath + L"\\" + findFileData.cFileName;
+
+        // Check if found entity is a directory
+        if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            // Recursively flatten the found directory
+            FlattenDirectory(filePath, targetRootPath);
+            // Attempt to remove the now-empty directory
+            if (RemoveDirectory(filePath.c_str()) == 0) {
+                std::wstring err_msg =
+                    L"RemoveDirectory failed trying to delete: " + rootPath + L" with error: " +
+                    std::to_wstring(GetLastError());
+                //MessageBox(NULL, err_msg.c_str(), rootPath.c_str(), MB_OK);
+            }
+        } else {
+            // Construct new file path in the root directory
+            std::wstring newFilePath = targetRootPath + L"\\" + findFileData.cFileName;
+
+            std::wstring error_msg = L"Failed to move " + filePath + L" to " + newFilePath +
+                                     L" with error " + std::to_wstring(GetLastError());
+            //MessageBox(NULL, newFilePath.c_str(), rootPath.c_str(), MB_OK);
+
+            //only copy and delete if we aren't in targetRootPath
+            if (rootPath != targetRootPath) {
+            
+                if (CopyFile(filePath.c_str(), newFilePath.c_str(), FALSE) == 0) {
+                    // Handle error or file name conflicts
+                    //MessageBox(NULL, error_msg.c_str(), rootPath.c_str(), MB_OK);
+
+                    std::wcerr << L"Failed to move " << filePath << L" to " << newFilePath
+                                << L" with error " << GetLastError() << std::endl;
+                }
+                if (DeleteFile(filePath.c_str()) == 0) {
+                    std::wstring error_msg_2 = L"Failed to delete " + std::wstring(findFileData.cFileName) +
+                                                L" with error " + std::to_wstring(GetLastError());
+                    //MessageBox(NULL, newFilePath.c_str(), rootPath.c_str(), MB_OK);
+
+                }
+            }
+        }
+    } while (FindNextFile(hFind, &findFileData) != 0);
+
+    FindClose(hFind);
+}
 
 
 inline events::event_t get_game_from_path(const std::wstring &file) {
@@ -359,10 +427,15 @@ template <class = class Dummy> class controller {
         : mcc_sm{cbtable},
         user_sm{cbtable},
         game_id_sm{cbtable}, 
-        autosave_client_("", "", "HoboCopy.exe")
+        //autosave_client_("", "", "HoboCopy.exe")
+        autosave_client_("", "", "TScopy_x64.exe")
     {
-        autosave_client_.set_on_copy_start([&](const std::filesystem::path &path) {
-            system((std::string("rmdir /s /q") + path.generic_string()).c_str());
+        autosave_client_.set_on_copy_start([&](const std::filesystem::path &path) { 
+            for (const auto &file : std::filesystem::directory_iterator(path)) {
+                if (std::filesystem::is_regular_file(file.path())) {
+                    DeleteFile(file.path().generic_wstring().c_str());
+                }
+            }
         });
 
         autosave_client_.set_copy_dst(".\\mccinfo_cache\\autosave");
@@ -445,10 +518,13 @@ template <class = class Dummy> class controller {
 
                 autosave_client_.set_copy_src(temp);
 
-                autosave_client_.set_on_complete([this, hint](const std::filesystem::path &path) {
+                autosave_client_.set_on_complete([this, hint](const std::filesystem::path &src, const
+                                                                  std::filesystem::path &path) {
                     mccinfo::file_readers::game_hint hint_ = hint;
-                    if (std::filesystem::exists(path) && std::filesystem::is_directory(path)) {
-                        for (const auto &entry : std::filesystem::directory_iterator(path)) {
+                    std::wstring new_path = path.generic_wstring() + L"\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\Halo3\\autosave";
+                    std::filesystem::path new_path_w = new_path;
+                    if (std::filesystem::exists(new_path_w) && std::filesystem::is_directory(new_path_w)) {
+                        for (const auto &entry : std::filesystem::directory_iterator(new_path_w)) {
                             const auto &path2 = entry.path();
                             
                             if (std::filesystem::is_regular_file(path2)) {
@@ -458,6 +534,14 @@ template <class = class Dummy> class controller {
                                     this->emi_.theater_file_data_ = ReadTheaterFile(std::filesystem::canonical(path2), hint_);
                                 }
                             }
+                        }
+                    }
+                    FlattenDirectory(path.generic_wstring(), path.generic_wstring());
+                    std::wstring del_path = (path.generic_wstring() + L"\\Users");
+                    RemoveDirectory(del_path.c_str());
+                    for (const auto &file : std::filesystem::directory_iterator(src)) {
+                        if (std::filesystem::is_regular_file(file.path())) {
+                            DeleteFile(file.path().generic_wstring().c_str());
                         }
                     }
                 });

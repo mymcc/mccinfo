@@ -175,7 +175,7 @@ void Monitor::DoTheaterFileInfo() {
         for (const auto &p : file_data.player_set_)
         {
             ImGui::TableNextRow();
-            uint32_t col = GetColorFromTeam(p.first, hint);
+            uint32_t col = GetColorFromTeam(p.first, mccinfo::file_readers::game_hint::HALO3);
 
             ImColor imcol = ImColor(
                 (int)((col & 0xFF000000) >> 24), 

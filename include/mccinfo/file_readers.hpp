@@ -321,7 +321,7 @@ class halo3_theater_file_reader : public theater_file_reader {
             if (buf[0] == '\0')
             {
                 ++empty_region_count;
-                if (empty_region_count >= 2) {
+                if (empty_region_count >= 5) {
                     break;
                 }
             } else {
