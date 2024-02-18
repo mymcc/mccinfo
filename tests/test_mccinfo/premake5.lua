@@ -23,6 +23,7 @@ project "test_mccinfo"
         "../%{IncludeDir.sml}",
         "../%{IncludeDir.cometa}",
         "../%{IncludeDir.frozen}",
+        "../%{IncludeDir.spdlog}",
     }
 
     links

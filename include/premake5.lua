@@ -24,6 +24,7 @@ project "mccinfo"
         "%{IncludeDir.sml}",
         "%{IncludeDir.cometa}",
         "%{IncludeDir.frozen}",
+        "%{IncludeDir.spdlog}",
     }
 
     links

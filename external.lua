@@ -11,6 +11,7 @@ IncludeDir["cometa"] = "../external/cometa/include"
 IncludeDir["frozen"] = "../external/frozen/include"
 IncludeDir["imgui"]  = "../external/imgui"
 IncludeDir["GLEW"] = "../external/glew/include"
+IncludeDir["spdlog"] = "../external/spdlog/include"
 LibraryDir = {}
 
 group "external"

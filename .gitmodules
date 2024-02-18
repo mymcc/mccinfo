@@ -31,3 +31,6 @@
 	url = https://github.com/ocornut/imgui/
 	branch = docking
 	ignore = dirty
+[submodule "external/spdlog"]
+	path = external/spdlog
+	url = https://github.com/gabime/spdlog

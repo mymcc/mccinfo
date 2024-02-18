@@ -30,6 +30,7 @@ project "mccinfo-monitor"
         "%{IncludeDir.sml}",
         "%{IncludeDir.cometa}",
         "%{IncludeDir.frozen}",
+        "%{IncludeDir.spdlog}",
     }
 
     links
