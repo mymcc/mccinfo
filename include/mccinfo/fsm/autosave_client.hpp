@@ -3,6 +3,83 @@
 namespace mccinfo {
 namespace fsm {
 
+namespace details {
+inline void flatten(
+    const std::filesystem::path & current_root_path, 
+    const std::filesystem::path & target_root_path) {
+    WIN32_FIND_DATA findFileData;
+    HANDLE hFind = INVALID_HANDLE_VALUE;
+
+    const std::filesystem::path &search_pattern =
+        std::filesystem::absolute(current_root_path) / "*";
+
+    // Find the first file in the directory.
+    hFind = FindFirstFile(search_pattern.generic_wstring().c_str(), &findFileData);
+    if (hFind == INVALID_HANDLE_VALUE) {
+        //MessageBox(NULL, search_pattern.generic_wstring().c_str(),
+        //           current_root_path.generic_wstring().c_str(), MB_OK);
+        std::wcerr << L"FindFirstFile failed for " << search_pattern.generic_wstring()
+                   << L" with error " << GetLastError()
+                   << std::endl;
+        return;
+    }
+
+    do {
+        // Skip '.' and '..' directories
+        if (wcscmp(findFileData.cFileName, L".") == 0 ||
+            wcscmp(findFileData.cFileName, L"..") == 0) {
+            continue;
+        }
+
+        const std::filesystem::path& file_path = 
+            current_root_path / std::wstring(findFileData.cFileName);
+
+        // Check if found entity is a directory
+        if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            // Recursively flatten the found directory
+            flatten(file_path, target_root_path);
+            // Attempt to remove the now-empty directory
+            if (RemoveDirectory(file_path.generic_wstring().c_str()) == 0) {
+                std::wstring err_msg = L"RemoveDirectory failed trying to delete: " +
+                                       current_root_path.generic_wstring() +
+                                       L" with error: " + std::to_wstring(GetLastError());
+                //MessageBox(NULL, err_msg.c_str(), current_root_path.generic_wstring().c_str(), MB_OK);
+            }
+        } else {
+            // Construct new file path in the root directory
+            const std::filesystem::path& new_file_path = target_root_path.generic_wstring() + L"\\" + findFileData.cFileName;
+
+            std::wstring error_msg = L"Failed to move " + file_path.generic_wstring() + L" to " +
+                                     new_file_path.generic_wstring() +
+                                     L" with error " + std::to_wstring(GetLastError());
+            //MessageBox(NULL, new_file_path.generic_wstring().c_str(), current_root_path.generic_wstring().c_str(), MB_OK);
+
+            // only copy and delete if we aren't in targetRootPath
+            if (current_root_path != target_root_path) {
+
+                if (CopyFile(file_path.generic_wstring().c_str(), new_file_path.generic_wstring().c_str(), FALSE) == 0) {
+                    // Handle error or file name conflicts
+                    //MessageBox(NULL, error_msg.c_str(), current_root_path.generic_wstring().c_str(), MB_OK);
+
+                    std::wcerr << L"Failed to move " << file_path.generic_wstring() << L" to "
+                               << new_file_path.generic_wstring()
+                               << L" with error " << GetLastError() << std::endl;
+                }
+                if (DeleteFile(file_path.generic_wstring().c_str()) == 0) {
+                    std::wstring error_msg_2 = L"Failed to delete " +
+                                               std::wstring(findFileData.cFileName) +
+                                               L" with error " + std::to_wstring(GetLastError());
+                    //MessageBox(NULL, new_file_path.generic_wstring().c_str(), current_root_path.generic_wstring().c_str(),
+                    //           MB_OK);
+                }
+            }
+        }
+    } while (FindNextFile(hFind, &findFileData) != 0);
+
+    FindClose(hFind);
+}
+} // namespace details
+
 class autosave_client {
 public:
     autosave_client() 
@@ -42,6 +119,10 @@ public:
         error_callback_ = error_callback;
     }
 
+    void set_flatten_on_write(bool flatten) {
+        flatten_on_write_ = flatten;
+    }
+
     void start() {
         copy_thread_ = std::thread([&] { 
             std::unique_lock<std::mutex> lock(mut_);
@@ -62,11 +143,13 @@ public:
 
                 bool success = do_copy();
 
-
-
                 if (success && post_callback_) {
                     post_callback_(src_, dst_);
-                } 
+                }
+
+                if (flatten_on_write_) {
+                    details::flatten(dst_, dst_);
+                }
 
                 else if (error_callback_){
                     error_callback_(GetLastError());
@@ -127,6 +210,7 @@ private:
     std::function<void(const std::filesystem::path &)> pre_callback_;
     std::function<void(const std::filesystem::path &, const std::filesystem::path &)> post_callback_;
     std::function<void(DWORD)> error_callback_;
+    bool flatten_on_write_ = false;
 
   private:
     std::mutex mut_;

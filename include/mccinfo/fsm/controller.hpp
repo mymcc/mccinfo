@@ -20,7 +20,7 @@ namespace mccinfo {
 namespace fsm {
 
 
-inline void FlattenDirectory(const std::wstring &rootPath,
+inline void flatten_(const std::wstring &rootPath,
                              const std::wstring &targetRootPath) {
     WIN32_FIND_DATA findFileData;
     HANDLE hFind = INVALID_HANDLE_VALUE;
@@ -50,7 +50,7 @@ inline void FlattenDirectory(const std::wstring &rootPath,
         // Check if found entity is a directory
         if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
             // Recursively flatten the found directory
-            FlattenDirectory(filePath, targetRootPath);
+            flatten_(filePath, targetRootPath);
             // Attempt to remove the now-empty directory
             if (RemoveDirectory(filePath.c_str()) == 0) {
                 std::wstring err_msg =
@@ -417,6 +417,7 @@ struct map_info {
 struct extended_match_info {
     std::optional<std::filesystem::path> base_map_;
     std::optional<mccinfo::file_readers::theater_file_data> theater_file_data_;
+    std::optional<mccinfo::file_readers::game_hint> game_hint_;
 };
 
 template <class = class Dummy> class controller {
@@ -476,6 +477,7 @@ template <class = class Dummy> class controller {
                 mi.map = "";
                 emi_.base_map_ = std::nullopt;
                 emi_.theater_file_data_ = std::nullopt;
+                emi_.game_hint_ = std::nullopt;
             }
 
             if (user_sm.is(boost::sml::state<states::in_game>) && before_was_not_in_game) {
@@ -484,44 +486,71 @@ template <class = class Dummy> class controller {
 
             if (should_save_autosave) {
                 std::string temp = "C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\";
+                std::wstring game = L"";
                 mccinfo::file_readers::game_hint hint = mccinfo::file_readers::game_hint::HALO3;
 
                 assert(!game_id_sm.is(boost::sml::state<states::none>));
 
                 if (game_id_sm.is(boost::sml::state<states::haloce>)) {
                     temp += "Halo1";
+                    game = L"Halo1";
                     hint = mccinfo::file_readers::game_hint::HALO1;
+                    //MessageBox(NULL, L"HALO1", L"", MB_OK);
+
                 } else if (game_id_sm.is(boost::sml::state<states::halo2>)) {
                     temp += "Halo2";
+                    game = L"Halo2";
+
                     hint = mccinfo::file_readers::game_hint::HALO2;
+                    //MessageBox(NULL, L"HALO2", L"", MB_OK);
+
 
                 } else if (game_id_sm.is(boost::sml::state<states::halo3>)) {
                     temp += "Halo3";
+                    game = L"Halo3";
+
                     hint = mccinfo::file_readers::game_hint::HALO3;
+                    //MessageBox(NULL, L"HALO3", L"", MB_OK);
+
                 } else if (game_id_sm.is(boost::sml::state<states::halo3odst>)) {
                     temp += "Halo3ODST";
+                    game = L"Halo3ODST";
+
                     hint = mccinfo::file_readers::game_hint::HALO3;
+                    //MessageBox(NULL, L"HALO3ODST", L"", MB_OK);
 
                 } else if (game_id_sm.is(boost::sml::state<states::haloreach>)) {
                     temp += "HaloReach";
+                    game = L"HaloReach";
+
                     hint = mccinfo::file_readers::game_hint::HALOREACH;
+                    //MessageBox(NULL, L"HALOREACH", L"", MB_OK);
+
                 } else if (game_id_sm.is(boost::sml::state<states::halo4>)) {
                     temp += "Halo4";
+                    game = L"Halo4";
                     hint = mccinfo::file_readers::game_hint::HALO4;
+                    //MessageBox(NULL, L"HALO4", L"", MB_OK);
 
                 } else if (game_id_sm.is(boost::sml::state<states::halo2a>)) {
                     temp += "Halo2A";
+                    game = L"Halo2A";
                     hint = mccinfo::file_readers::game_hint::HALO2A;
+                    //MessageBox(NULL, L"HALO2A", L"", MB_OK);
                 }
 
                 temp += "\\autosave";
+                emi_.game_hint_ = hint;
 
                 autosave_client_.set_copy_src(temp);
+                autosave_client_.set_flatten_on_write(true);
 
-                autosave_client_.set_on_complete([this, hint](const std::filesystem::path &src, const
+                autosave_client_.set_on_complete([this, hint, game](const std::filesystem::path &src, const
                                                                   std::filesystem::path &path) {
                     mccinfo::file_readers::game_hint hint_ = hint;
-                    std::wstring new_path = path.generic_wstring() + L"\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\Halo3\\autosave";
+                    std::wstring new_path = path.generic_wstring() + L"\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\";
+                    new_path += game;
+                    new_path += L"\\autosave";
                     std::filesystem::path new_path_w = new_path;
                     if (std::filesystem::exists(new_path_w) && std::filesystem::is_directory(new_path_w)) {
                         for (const auto &entry : std::filesystem::directory_iterator(new_path_w)) {
@@ -536,7 +565,7 @@ template <class = class Dummy> class controller {
                             }
                         }
                     }
-                    FlattenDirectory(path.generic_wstring(), path.generic_wstring());
+                    //flatten(path.generic_wstring(), path.generic_wstring());
                     std::wstring del_path = (path.generic_wstring() + L"\\Users");
                     RemoveDirectory(del_path.c_str());
                     for (const auto &file : std::filesystem::directory_iterator(src)) {
@@ -551,7 +580,7 @@ template <class = class Dummy> class controller {
                     (hint == mccinfo::file_readers::game_hint::HALO4)) {
                     autosave_client_.request_copy(5000);
                 }
-                autosave_client_.request_copy(0);
+                autosave_client_.request_copy(1000);
                 should_save_autosave = false;
             }
 

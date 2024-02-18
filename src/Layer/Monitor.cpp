@@ -149,7 +149,7 @@ uint32_t GetColorFromTeam(int team, mccinfo::file_readers::game_hint hint) {
 void Monitor::DoTheaterFileInfo() {
 
     auto emi = context_->get_extended_match_info();
-    if (emi.theater_file_data_.has_value()) {
+    if (emi.theater_file_data_.has_value() ) {
         auto file_data = emi.theater_file_data_.value();
         ImGui::Text("Theater File Author:");
         ImGui::SameLine();
@@ -175,7 +175,9 @@ void Monitor::DoTheaterFileInfo() {
         for (const auto &p : file_data.player_set_)
         {
             ImGui::TableNextRow();
-            uint32_t col = GetColorFromTeam(p.first, mccinfo::file_readers::game_hint::HALO3);
+
+            
+            uint32_t col = GetColorFromTeam(p.first, emi.game_hint_.value());
 
             ImColor imcol = ImColor(
                 (int)((col & 0xFF000000) >> 24), 
@@ -186,6 +188,7 @@ void Monitor::DoTheaterFileInfo() {
 
             ImU32 row_bg_color = ImU32(imcol);
             ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, row_bg_color);
+            
             ImGui::TableSetColumnIndex(0);
             ImGui::Text("%s", p.second.c_str());
             ++i;
