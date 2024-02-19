@@ -45,37 +45,30 @@ struct user {
 
         boost::sml::state<offline> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         std::cout << "offline\n" << std::flush;
                                          cbtable.execute_callback(ON_STATE_ENTRY | OFFLINE);
                                      },
         boost::sml::state<waiting_on_launch> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         std::cout << "waiting_on_launch\n" << std::flush;
                                          cbtable.execute_callback(ON_STATE_ENTRY | WAITING_ON_LAUNCH);
                                      },
         boost::sml::state<identifying_session> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         std::cout << "identifying_session\n" << std::flush;
                                          cbtable.execute_callback(ON_STATE_ENTRY | IDENTIFYING_SESSION);
                                      },
         boost::sml::state<in_menus> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         std::cout << "in_menus\n" << std::flush;
                                          cbtable.execute_callback(ON_STATE_ENTRY | IN_MENUS);
                                      },
         boost::sml::state<loading_in> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         std::cout << "loading_in\n" << std::flush;
                                          cbtable.execute_callback(ON_STATE_ENTRY | LOADING_IN);
                                      },
         boost::sml::state<in_game> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         std::cout << "in_match\n" << std::flush;
                                          cbtable.execute_callback(ON_STATE_ENTRY | IN_GAME);
                                      },
         boost::sml::state<loading_out> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         std::cout << "loading_out\n" << std::flush;
                                          cbtable.execute_callback(ON_STATE_ENTRY | LOADING_OUT);
                                      }
 

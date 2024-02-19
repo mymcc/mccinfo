@@ -8,8 +8,10 @@ void *g_Instance = nullptr;
 namespace mccinfo {
 int main(int argc, char **argv) {
     // mcctp::core::Log::Init();
+    mccinfo::core::log::init();
 
     while (g_ApplicationRunning) {
+        //MI_CORE_TRACE("Initialized");
         mccinfo::Application *app = new mccinfo::Application();
         g_Instance = app;
         //  // mcctp_CORE_TRACE("Initialized");
@@ -32,6 +34,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
     UNREFERENCED_PARAMETER(hPrevInstance);
     UNREFERENCED_PARAMETER(lpCmdLine);
     UNREFERENCED_PARAMETER(nCmdShow);
+
+    AllocConsole();
+
+    freopen("CONIN$", "r", stdin);
+    freopen("CONOUT$", "w", stdout);
+    freopen("CONOUT$", "w", stderr);
 
     return mccinfo::main(__argc, __argv);
 }

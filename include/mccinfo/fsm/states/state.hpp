@@ -37,11 +37,11 @@ struct state_context {
                                        const krabs::trace_context &trace_context) {
         std::optional<events::event_t> _evt;
         if (auto it = edge_context.find(utility::id<_State>); it != edge_context.end() ) {
-            woss << L"State Context Cache: hit\n";
+            woss << L"\t\tState Context Cache: hit\n";
             _evt = it->second->handle_trace_event(woss, record, trace_context);
 
         } else {
-            woss << "State Context Cache: miss\n";
+            woss << "\t\tState Context Cache: miss\n";
             auto edges = _State::clone_edges();
             std::unique_ptr<edges::edge_container_base> ptr =
                 std::make_unique<decltype(edges)>(edges);
@@ -116,7 +116,7 @@ template <typename StateMachine> class BonusStateVisitor {
   void operator()(boost::sml::aux::string<TSimpleState>) const
   {
     auto ws = utility::ConvertBytesToWString(std::string(utility::make_type_name_minimal<TSimpleState>()));
-    if (ws.has_value()) woss_ << L"Current State: " << ws.value() << L'\n';
+    if (ws.has_value()) woss_ << L"\t\tCurrent State: " << ws.value() << L'\n';
     state_context_.handle_trace_event<TSimpleState>(woss_, event_record_, trace_context_);
   }
 
@@ -167,7 +167,7 @@ template <typename StateMachine> class StatePrinter {
   void operator()(boost::sml::aux::string<TSimpleState>) const
   {
     auto ws = utility::ConvertBytesToWString(std::string(utility::make_type_name_minimal<TSimpleState>()));
-    if (ws.has_value()) woss_ << L"Result State: " << ws.value() << L'\n';
+    if (ws.has_value()) woss_ << L"\t\tResult State: " << ws.value() << L'\n';
   }
 
 private:

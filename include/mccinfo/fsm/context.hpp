@@ -13,7 +13,9 @@ namespace fsm {
 
 class context {
   public:
-    context(callback_table& cbtable) : sm_(cbtable) {}
+    context(callback_table& cbtable) : sm_(cbtable) {
+        MI_CORE_TRACE("Constructing fsm context ...");
+    }
 
     std::string get_map_info() const {
         return sm_.get_map_info();
@@ -29,12 +31,16 @@ class context {
 
     void start() {
         dispatch_thread_ = std::thread([&]{
+            MI_CORE_TRACE("Starting fsm context ...");
+
             provider_.enable_dispatch_to(&sm_);
             provider_.start();
         });
     }
     void stop() {
         if (dispatch_thread_.joinable()) {
+            MI_CORE_TRACE("Stopping fsm context ...");
+
             provider_.stop();
             dispatch_thread_.join();
         }

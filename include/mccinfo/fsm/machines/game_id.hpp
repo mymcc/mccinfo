@@ -49,42 +49,34 @@ struct game_id {
 
         boost::sml::state<none> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         std::cout << "none\n" << std::flush;
                                          cbtable.execute_callback(ON_STATE_ENTRY | NONE);
                                      },
         boost::sml::state<haloce> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         std::cout << "haloce\n" << std::flush;
                                          cbtable.execute_callback(ON_STATE_ENTRY | HALOCE);
                                      },
         boost::sml::state<halo2> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         std::cout << "halo2\n" << std::flush;
                                          cbtable.execute_callback(ON_STATE_ENTRY | HALO2);
                                      },
         boost::sml::state<halo2a> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         std::cout << "halo2a\n" << std::flush;
                                          cbtable.execute_callback(ON_STATE_ENTRY | HALO2A);
                                      },
         boost::sml::state<halo3> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         std::cout << "halo3\n" << std::flush;
                                          cbtable.execute_callback(ON_STATE_ENTRY | HALO3);
                                      },
         boost::sml::state<halo3odst> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         std::cout << "halo3odst\n" << std::flush;
                                          cbtable.execute_callback(ON_STATE_ENTRY | HALO3ODST);
                                      },
         boost::sml::state<halo4> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         std::cout << "halo4\n" << std::flush;
                                          cbtable.execute_callback(ON_STATE_ENTRY | HALO4);
                                      },
         boost::sml::state<haloreach> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         std::cout << "haloreach\n" << std::flush;
                                          cbtable.execute_callback(ON_STATE_ENTRY | HALOREACH);
                                      }
     );

@@ -119,7 +119,13 @@ inline bool file_has_open_handle(const std::wstring &file) {
                        NULL);                  // no attr. template
 
     if ((hFile == INVALID_HANDLE_VALUE) && (GetLastError() == ERROR_SHARING_VIOLATION)) {
-        std::wcout << "sharing violation\n" << std::flush;
+        auto bytes = utility::ConvertWStringToBytes(file);
+        if (bytes.has_value()) {
+            MI_CORE_TRACE("Sharing violation, file is guaranteed to have an open handle restricting access: {0}", bytes.value());
+        }
+        else {
+            MI_CORE_TRACE("Sharing violation, file is guaranteed to have an open handle restricting access: Error logging file");
+        }
         return true;
     }
     else {
@@ -187,8 +193,7 @@ inline std::optional<events::event_t> identify_game() {
 
 inline void print_trace_event(std::wostringstream& woss, const EVENT_RECORD &record,
                                                const krabs::trace_context &trace_context) {
-    woss << L"=============================================================\n";
-
+    woss << L"\t";
     krabs::schema schema(record, trace_context.schema_locator);
     krabs::parser parser(schema);
     
@@ -374,18 +379,18 @@ class filtering_context {
                 auto game_event = identify_game();
 
                 if (game_event.has_value()) {
-                    std::wcout << L"Sending Artificial match_found Event: " << L"\n";
+                    std::wcout << L"\t\tSending Artificial match_found Event: " << L"\n";
                     user_sm.process_event(events::match_found{});
-                    std::wcout << L"Sending Artificial game_event Event: " << L"\n";
+                    std::wcout << L"\t\tSending Artificial game_event Event: " << L"\n";
                     std::visit([&](auto &&evt) { game_id_sm.process_event(evt); },
                                game_event.value());
                 } else {
-                    std::wcout << L"Sending Artificial launch_identified Event: " << L"\n";
+                    std::wcout << L"\t\tSending Artificial launch_identified Event: " << L"\n";
                     user_sm.process_event(events::launch_identified{});
                 }
 
             } else {
-                std::wcout << L"Sending Artificial in_menus_identified Event: " << L"\n";
+                std::wcout << L"\t\tSending Artificial in_menus_identified Event: " << L"\n";
                 user_sm.process_event(events::in_menus_identified{});
             }
 
@@ -431,6 +436,8 @@ template <class = class Dummy> class controller {
         //autosave_client_("", "", "HoboCopy.exe")
         autosave_client_("", "", "TScopy_x64.exe")
     {
+        MI_CORE_TRACE("Constructing fsm controller ...");
+
         autosave_client_.set_on_copy_start([&](const std::filesystem::path &path) { 
             for (const auto &file : std::filesystem::directory_iterator(path)) {
                 if (std::filesystem::is_regular_file(file.path())) {
@@ -439,7 +446,11 @@ template <class = class Dummy> class controller {
             }
         });
 
+        MI_CORE_TRACE("Setting autosave destination to: .\\mccinfo_cache\\autosave");
+
         autosave_client_.set_copy_dst(".\\mccinfo_cache\\autosave");
+
+        MI_CORE_TRACE("Starting autosave client ...");
         autosave_client_.start();
     };
 
@@ -621,7 +632,7 @@ template <class = class Dummy> class controller {
                     auto ws = utility::ConvertBytesToWString(
                         std::string(utility::type_hash<decltype(arg)>::name));
                     if (ws.has_value())
-                        woss << L"Sending Event: " << ws.value() << L"\n";
+                        woss << L"\t\tSending Event: " << ws.value() << L"\n";
                     state_change = true;
                     sm.process_event(arg);
                 },
@@ -635,8 +646,16 @@ template <class = class Dummy> class controller {
         };
         sm.visit_current_states(visit2);
 
-        if (log_full || state_change)
-            std::wcout << woss.str() << std::flush;
+        if (log_full || state_change) {
+            auto bytes = utility::ConvertWStringToBytes(woss.str());
+            if (bytes.has_value())
+                MI_CORE_TRACE("Handling kernel event:\n{0}", bytes.value());
+            else
+            {
+                MI_CORE_WARN("Handling kernel event ... Error converting logging trace event");
+
+            }
+        }
     }
   private:
     utility::atomic_mutex lock;

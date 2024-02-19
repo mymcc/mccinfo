@@ -77,12 +77,14 @@ class event_provider {
   public:
     event_provider() : 
         trace_(L"mccinfo_kernel_trace") {
-
+        MI_CORE_TRACE("Constructing fsm event provider ...");
     }
 
     // TODO Figure a way around the static stuff here (another state machine)
     template <typename T>
     void enable_dispatch_to(T* sm) {
+        MI_CORE_TRACE("Enabling kernel event dispatch fsm controller ...");
+
         static krabs::event_filter process_filter = predicates::filters::make_process_filter();
         static krabs::event_filter fiio_filter = predicates::filters::make_fiio_filter();
         static krabs::event_filter il_filter = predicates::filters::make_dummy_image_filter();
@@ -125,15 +127,24 @@ class event_provider {
         fiio_provider_.add_filter(fiio_filter);
         il_provider_.add_filter(il_filter);
 
+        MI_CORE_TRACE("Enabling kernel event providers ...");
+
         trace_.enable(process_provider_);
         trace_.enable(fiio_provider_);
         //trace_.enable(il_provider_);
+        MI_CORE_TRACE("Kernel event providers enabled");
+
+        MI_CORE_TRACE("Kernel event dispatch enabled");
 
     }
     void start() {
+        MI_CORE_TRACE("Starting kernel event trace ...");
+
         trace_.start();
     }
     void stop() {
+        MI_CORE_TRACE("Stopping kernel event trace ...");
+
         trace_.stop();
     }
 

@@ -44,7 +44,7 @@ class edge {
                                         const EVENT_RECORD &record,
                                         const krabs::trace_context &trace_context) {
             bool result = edge_.first->try_advance(record, trace_context);
-            woss << L"Sequence Result: " << ((result) ? L"advanced" : L"nil") << L'\n';
+            woss << L"\t\tSequence Result: " << ((result) ? L"advanced" : L"nil") << L'\n';
             return edge_.first->is_complete();
         }
 
