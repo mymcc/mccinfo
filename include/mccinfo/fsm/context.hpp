@@ -22,7 +22,15 @@ class context {
     }
 
     mccinfo::file_readers::theater_file_data get_theater_file_data() const {
-        sm_.get_theater_file_data();
+        return sm_.get_theater_file_data();
+    }
+
+    std::vector<std::optional<mccinfo::query::MCCInstallInfo>> get_install_info() const {
+        return sm_.get_install_info();
+    }
+
+    std::optional<mccinfo::query::MCCInstallInfo> get_active_install_info() const {
+        return std::nullopt;
     }
 
     const extended_match_info &get_extended_match_info() const {

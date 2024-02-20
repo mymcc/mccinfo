@@ -172,7 +172,7 @@ inline std::optional<std::string> ConvertWStringToBytes(const std::wstring &wstr
     return result;
 }
 
-std::optional<std::vector<char>> SlurpFile(const std::filesystem::path path) {
+inline std::optional<std::vector<char>> SlurpFile(const std::filesystem::path path) {
     std::ifstream file(path, std::ios::binary | std::ios::ate);
     std::streamsize file_size = file.tellg();
     file.seekg(0, std::ios::beg);
@@ -184,7 +184,7 @@ std::optional<std::vector<char>> SlurpFile(const std::filesystem::path path) {
         return std::nullopt;
 }
 
-std::optional<std::filesystem::path> ExpandPath(const std::filesystem::path &path) {
+inline std::optional<std::filesystem::path> ExpandPath(const std::filesystem::path &path) {
     std::wstring dst;
     dst.resize(MAX_PATH);
     DWORD ret = ::ExpandEnvironmentStringsW(path.wstring().c_str(), dst.data(), MAX_PATH);

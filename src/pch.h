@@ -17,6 +17,8 @@
 #include <tchar.h>
 #include <mmsystem.h>
 #include <avrt.h>
+#include <shellapi.h>
+#pragma comment(lib, "shell32")
 
 #define STATUS_SUCCESS 0
 #define STATUS_TIMER_RESOLUTION_NOT_SET 0xC0000245

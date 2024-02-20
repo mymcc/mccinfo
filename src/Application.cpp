@@ -149,7 +149,7 @@ Application::Application(const ApplicationSpecification &applicationSpecificatio
 
     CenterWindow();
     ApplyBorderlessFrame();
-    ApplyBgColors();
+    //ApplyBgColors();
 
     PushLayer<Monitor>();
 
@@ -201,6 +201,7 @@ void Application::Run() {
                                                  ImGuiDockNodeFlags_PassthruCentralNode);
                 }
 
+                ImGui::ShowDemoWindow();
                 // Draw Layers
                 {
                     for (auto &layer : m_LayerStack)
@@ -399,8 +400,8 @@ void Application::RenderAppFrame() {
 
     // Blit
     ::SwapBuffers(g_MainWindow.hDC);
-
-    ImGui_ImplWin32_EnableAlphaCompositing(m_Window->m_hHWND);
+    //ApplyBorderlessFrame();
+    //ImGui_ImplWin32_EnableAlphaCompositing(m_Window->m_hHWND);
     ImGui_ImplWin32_EnableDpiAwareness();
 }
 void Application::FixTimestep()
@@ -425,8 +426,8 @@ void Application::ApplyBorderlessFrame()
 {
     static ImVec4 color =
         ImVec4(114.0f / 255.0f, 144.0f / 255.0f, 154.0f / 255.0f, 200.0f / 255.0f);
-    //ACCENT_POLICY policy = { ACCENT_STATE(ACCENT_ENABLE_BLURBEHIND),
-    ACCENT_POLICY policy = { ACCENT_STATE(ACCENT_ENABLE_TRANSPARENTGRADIENT),
+    ACCENT_POLICY policy = { ACCENT_STATE(ACCENT_ENABLE_BLURBEHIND),
+    //ACCENT_POLICY policy = { ACCENT_STATE(ACCENT_ENABLE_TRANSPARENTGRADIENT),
                                 1, (((int)(color.w * 255)) << 24) | (((int)(color.z * 255)) << 16) |
         (((int)(color.y * 255)) << 8) | ((int)(color.x * 255)),
                                 0 };

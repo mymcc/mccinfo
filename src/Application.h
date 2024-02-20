@@ -5,8 +5,8 @@
 namespace mccinfo {
 struct ApplicationSpecification {
     std::string Name = "mccinfo-monitor";
-    uint32_t Width = 450;
-    uint32_t Height = 200;
+    uint32_t Width = 650;
+    uint32_t Height = 400;
 };
 
 class Application {
@@ -35,6 +35,11 @@ class Application {
     void PushLayer(const std::shared_ptr<mccinfo::Layer> &layer) {
         m_LayerStack.emplace_back(layer);
         layer->OnAttach();
+    }
+
+  public:
+    HWND GetWindowHandle() const {
+        return m_Window->m_hHWND;
     }
 
   private:

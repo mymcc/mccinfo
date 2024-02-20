@@ -1,8 +1,11 @@
 #include "pch.h"
 #include "Monitor.h"
+#include "Application.h"
+
 //#define STB_IMAGE_IMPLEMENTATION
 //#include "stb_image.h"
 extern HGLRC g_hRC;
+extern void *g_Instance;
 
 //std::shared_ptr<mcctp::Image> LoadAppIcon(void);
 //void DoTexturePackCheckbox(mcctp::TexturePackFlags texture_pack, bool *active);
@@ -213,7 +216,23 @@ void Monitor::OnUIRender() {
 
     DoMainMenuBar();
 
+    
+
+
     ImGui::Begin("Monitor");
+    
+    auto iis = context_->get_install_info();
+    for (const auto &ii : iis) {
+      if (ii.has_value()) {
+        std::wostringstream woss;
+        woss << ii.value();
+        auto bytes = utility::ConvertWStringToBytes(woss.str());
+        if (bytes.has_value()) {
+            ImGui::TextWrapped("%s", bytes.value().c_str());
+        }
+      }
+    }
+    
     ImGui::Text("MCC:");
     ImGui::SameLine();
     ImGui::Text("%s", mcc_state.c_str());
@@ -222,11 +241,22 @@ void Monitor::OnUIRender() {
     ImGui::Text("%s", user_state.c_str());
     ImGui::SameLine();
     ImGui::Text("(%s)", game_id_state.c_str());
-    ImGui::Text("Map:");        
+    ImGui::Text("Map:");
     ImGui::SameLine();
     ImGui::Text("(%s)", context_->get_map_info().c_str());
 
     DoTheaterFileInfo();
+
+
+    if (ImGui::Checkbox("Overlay", &overlay_game_)) {
+      HWND hwnd = ((mccinfo::Application *)g_Instance)->GetWindowHandle();
+      if (overlay_game_) {
+          SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 600, 400, SWP_SHOWWINDOW | SWP_NOSIZE | SWP_NOMOVE | SWP_NOREPOSITION | SWP_FRAMECHANGED);
+      } 
+      else {
+          SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 600, 400, SWP_SHOWWINDOW | SWP_NOSIZE | SWP_NOMOVE | SWP_NOREPOSITION | SWP_FRAMECHANGED);
+      }
+    }
 
     ImGui::End();
 
@@ -296,6 +326,15 @@ void Monitor::DoStatusBar(void)
 
             ImGui::Text("cpu: (%.1f %)", cpu_pct);
             ImGui::Text("mem: (%.2f MiB/ %.2f GiB)", bytes / (1024.0 * 1024.0), total_bytes / (1024.0 * 1024.0 * 1024.0));
+
+            if (ImGui::Button("Open MCC Temp Folder")) {
+                auto patht = mccinfo::query::LookForMCCTempPath();
+                if (patht.has_value()) {
+                    ShellExecuteW(NULL, L"open", patht.value().c_str(), NULL, NULL,
+                                  SW_SHOWNORMAL);
+                }
+
+            }
 
             ImGui::EndMenuBar();
         }

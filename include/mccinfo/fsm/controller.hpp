@@ -19,77 +19,6 @@
 namespace mccinfo {
 namespace fsm {
 
-
-inline void flatten_(const std::wstring &rootPath,
-                             const std::wstring &targetRootPath) {
-    WIN32_FIND_DATA findFileData;
-    HANDLE hFind = INVALID_HANDLE_VALUE;
-
-    // Prepare the search pattern
-    std::wstring searchPath = std::filesystem::canonical(std::filesystem::path(rootPath)).generic_wstring() + L"\\*";
-
-    // Find the first file in the directory.
-    hFind = FindFirstFile(searchPath.c_str(), &findFileData);
-    //MessageBox(NULL, searchPath.c_str(), rootPath.c_str(), MB_OK);
-    if (hFind == INVALID_HANDLE_VALUE) {
-        //MessageBox(NULL, searchPath.c_str(), rootPath.c_str(), MB_OK);
-        std::wcerr << L"FindFirstFile failed for " << rootPath << L" with error " << GetLastError()
-                   << std::endl;
-        return;
-    }
-
-    do {
-        // Skip '.' and '..' directories
-        if (wcscmp(findFileData.cFileName, L".") == 0 ||
-            wcscmp(findFileData.cFileName, L"..") == 0) {
-            continue;
-        }
-
-        std::wstring filePath = rootPath + L"\\" + findFileData.cFileName;
-
-        // Check if found entity is a directory
-        if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-            // Recursively flatten the found directory
-            flatten_(filePath, targetRootPath);
-            // Attempt to remove the now-empty directory
-            if (RemoveDirectory(filePath.c_str()) == 0) {
-                std::wstring err_msg =
-                    L"RemoveDirectory failed trying to delete: " + rootPath + L" with error: " +
-                    std::to_wstring(GetLastError());
-                //MessageBox(NULL, err_msg.c_str(), rootPath.c_str(), MB_OK);
-            }
-        } else {
-            // Construct new file path in the root directory
-            std::wstring newFilePath = targetRootPath + L"\\" + findFileData.cFileName;
-
-            std::wstring error_msg = L"Failed to move " + filePath + L" to " + newFilePath +
-                                     L" with error " + std::to_wstring(GetLastError());
-            //MessageBox(NULL, newFilePath.c_str(), rootPath.c_str(), MB_OK);
-
-            //only copy and delete if we aren't in targetRootPath
-            if (rootPath != targetRootPath) {
-            
-                if (CopyFile(filePath.c_str(), newFilePath.c_str(), FALSE) == 0) {
-                    // Handle error or file name conflicts
-                    //MessageBox(NULL, error_msg.c_str(), rootPath.c_str(), MB_OK);
-
-                    std::wcerr << L"Failed to move " << filePath << L" to " << newFilePath
-                                << L" with error " << GetLastError() << std::endl;
-                }
-                if (DeleteFile(filePath.c_str()) == 0) {
-                    std::wstring error_msg_2 = L"Failed to delete " + std::wstring(findFileData.cFileName) +
-                                                L" with error " + std::to_wstring(GetLastError());
-                    //MessageBox(NULL, newFilePath.c_str(), rootPath.c_str(), MB_OK);
-
-                }
-            }
-        }
-    } while (FindNextFile(hFind, &findFileData) != 0);
-
-    FindClose(hFind);
-}
-
-
 inline events::event_t get_game_from_path(const std::wstring &file) {
     if (file.find(L"Halo1") != std::wstring::npos)
         return events::haloce_found{};
@@ -438,6 +367,11 @@ template <class = class Dummy> class controller {
     {
         MI_CORE_TRACE("Constructing fsm controller ...");
 
+
+        find_mcc_installations();
+
+
+
         autosave_client_.set_on_copy_start([&](const std::filesystem::path &path) { 
             for (const auto &file : std::filesystem::directory_iterator(path)) {
                 if (std::filesystem::is_regular_file(file.path())) {
@@ -576,7 +510,7 @@ template <class = class Dummy> class controller {
                             }
                         }
                     }
-                    //flatten(path.generic_wstring(), path.generic_wstring());
+
                     std::wstring del_path = (path.generic_wstring() + L"\\Users");
                     RemoveDirectory(del_path.c_str());
                     for (const auto &file : std::filesystem::directory_iterator(src)) {
@@ -604,6 +538,14 @@ template <class = class Dummy> class controller {
     }
     mccinfo::file_readers::theater_file_data get_theater_file_data() const {
         return file_data;
+    }
+    std::vector<std::optional<mccinfo::query::MCCInstallInfo>> get_install_info() const {
+        std::vector<std::optional<mccinfo::query::MCCInstallInfo>> installations;
+        
+        installations.push_back(steam_install_);
+        installations.push_back(msstore_install_);
+        
+        return installations;
     }
 
     const extended_match_info& get_extended_match_info() const {
@@ -657,6 +599,29 @@ template <class = class Dummy> class controller {
             }
         }
     }
+
+    void find_mcc_installations() {
+        MI_CORE_TRACE("Looking for MCC Installations ...");
+
+        auto sii = mccinfo::query::LookForSteamInstallInfo();
+        if (sii.has_value()) {
+            std::wostringstream woss;
+            woss << sii.value();
+            auto bytes = utility::ConvertWStringToBytes(woss.str());
+            // assert here or provide an overload for string
+            MI_CORE_INFO("Steam Install Found:\n{0}", bytes.value());
+            steam_install_ = sii.value();
+        }
+
+        auto msii = mccinfo::query::LookForMicrosoftStoreInstallInfo();
+        if (msii.has_value()) {
+            std::wostringstream woss;
+            woss << msii.value();
+            auto bytes = utility::ConvertWStringToBytes(woss.str());
+            MI_CORE_INFO("MSStore Install Found:\n{0}", bytes.value());
+            msstore_install_ = msii.value();
+        }
+    }
   private:
     utility::atomic_mutex lock;
 
@@ -671,6 +636,12 @@ template <class = class Dummy> class controller {
     extended_match_info emi_;
 
     details::map_info mi;
+
+  private:
+    std::optional<query::MCCInstallInfo> steam_install_ = std::nullopt;
+    std::optional<query::MCCInstallInfo> msstore_install_ = std::nullopt;
+
+
     bool should_id_map = false;
     bool should_save_autosave = false;
 

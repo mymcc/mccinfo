@@ -16,6 +16,7 @@ private:
   void DoTheaterFileInfo(void);
 
 private:
+    bool overlay_game_ = false;
 	bool show_demo = false;
 	float m_FrameTime = 0.0f;
     std::string mcc_state;

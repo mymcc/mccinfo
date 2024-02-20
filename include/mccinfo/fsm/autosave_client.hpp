@@ -128,14 +128,23 @@ public:
             std::unique_lock<std::mutex> lock(mut_);
 
             while (true) {
+                MI_CORE_TRACE("autosave_client waiting for request ...");
+
                 cv_.wait(lock, [&] { return start_copy_ || stop_; });
 
-                if (stop_)
+                if (start_copy_)
+                    MI_CORE_TRACE("autosave_client received request to copy from src: {0}",
+                                  std::filesystem::absolute(src_).generic_string().c_str());
+                if (stop_) {
+                    MI_CORE_TRACE("autosave_client stopping ...");
                     break;
+                }
 
                 if (copy_delay_ms_ > 0) {
                     std::this_thread::sleep_for(std::chrono::milliseconds(copy_delay_ms_));
                 }
+
+                create_dst_if_needed();
 
                 if (pre_callback_) {
                     pre_callback_(dst_);
@@ -175,7 +184,25 @@ public:
     }
 
 private:
+    void create_dst_if_needed() {
+        if (!std::filesystem::exists(dst_)) {
+            MI_CORE_WARN(".\\mccinfo_cache\\autosave does not exist, creating: {0}",
+                         dst_.make_preferred().generic_string().c_str());
+            try {
+                std::filesystem::create_directories(dst_);
+            } catch (std::exception &e) {
+                MI_CORE_ERROR("Creation of {0} failed.\nLastError: {1}\nException: {2}",
+                    std::filesystem::absolute(dst_).generic_string().c_str(),
+                    GetLastError(),
+                    e.what()
+                );
+            }
+        }
+    }
+
     bool do_copy() {
+        MI_CORE_TRACE("autosave_client starting copy of autosave cache: {0}", std::filesystem::absolute(src_).generic_string().c_str());
+
         STARTUPINFOW si;
         PROCESS_INFORMATION pi;
 
