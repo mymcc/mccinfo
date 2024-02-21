@@ -140,25 +140,33 @@ public:
                     break;
                 }
 
+
                 if (copy_delay_ms_ > 0) {
+                    MI_CORE_TRACE("autosave_client waiting {0} ms to copy from src", std::to_string(copy_delay_ms_).c_str());
                     std::this_thread::sleep_for(std::chrono::milliseconds(copy_delay_ms_));
                 }
 
                 create_dst_if_needed();
 
                 if (pre_callback_) {
+                    MI_CORE_TRACE("Executing autosave_client pre_callback_ ...");
                     pre_callback_(dst_);
                 }
 
                 bool success = do_copy();
 
+                MI_CORE_TRACE("autosave_client copy result: {0}", (success) ? "success" : "failure");
+
+                if (flatten_on_write_) {
+                    MI_CORE_TRACE("autosave_client performing dst_ flattening ...");
+                    details::flatten(dst_, dst_);
+                }
+
                 if (success && post_callback_) {
+                    MI_CORE_TRACE("Executing autosave_client post_callback_ ...");
                     post_callback_(src_, dst_);
                 }
 
-                if (flatten_on_write_) {
-                    details::flatten(dst_, dst_);
-                }
 
                 else if (error_callback_){
                     error_callback_(GetLastError());

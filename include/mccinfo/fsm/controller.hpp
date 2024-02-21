@@ -180,48 +180,54 @@ inline mccinfo::file_readers::theater_file_data ReadTheaterFile(const std::files
                      mccinfo::file_readers::game_hint hint) {
     //theater_file_timestamp.str("");
     mccinfo::file_readers::theater_file_data file_data;
-    switch (hint) {
-    case mccinfo::file_readers::game_hint::HALO2A: {
-        mccinfo::file_readers::halo2a_theater_file_reader reader;
-        auto file_data_query = reader.Read(theater_file);
-        if (file_data_query.has_value()) {
-            file_data = file_data_query.value();
-            //theater_file_timestamp << file_data.utc_timestamp_;
-        }
-        break;
-    }
-    case mccinfo::file_readers::game_hint::HALO3: {
-        mccinfo::file_readers::halo3_theater_file_reader reader;
-        auto file_data_query = reader.Read(theater_file);
-        if (file_data_query.has_value()) {
-            file_data = file_data_query.value();
-            //theater_file_timestamp << file_data.utc_timestamp_;
-        }
-        break;
-    }
-    case mccinfo::file_readers::game_hint::HALOREACH: {
-        mccinfo::file_readers::haloreach_theater_file_reader reader;
-        auto file_data_query = reader.Read(theater_file);
-        if (file_data_query.has_value()) {
-            file_data = file_data_query.value();
-            //theater_file_timestamp << file_data.utc_timestamp_;
-        }
-        break;
-    }
-    case mccinfo::file_readers::game_hint::HALO4: {
-        mccinfo::file_readers::halo4_theater_file_reader reader;
-        auto file_data_query = reader.Read(theater_file);
-        if (file_data_query.has_value()) {
-            file_data = file_data_query.value();
-            //theater_file_timestamp << file_data.utc_timestamp_;
-        }
-        break;
-    }
-    default:
-        break;
-    }
 
+    if (std::filesystem::file_size(theater_file) > 0) {
+        switch (hint) {
+        case mccinfo::file_readers::game_hint::HALO2A: {
+            mccinfo::file_readers::halo2a_theater_file_reader reader;
+            auto file_data_query = reader.Read(theater_file);
+            if (file_data_query.has_value()) {
+                file_data = file_data_query.value();
+                //theater_file_timestamp << file_data.utc_timestamp_;
+            }
+            break;
+        }
+        case mccinfo::file_readers::game_hint::HALO3: {
+            mccinfo::file_readers::halo3_theater_file_reader reader;
+            auto file_data_query = reader.Read(theater_file);
+            if (file_data_query.has_value()) {
+                file_data = file_data_query.value();
+                //theater_file_timestamp << file_data.utc_timestamp_;
+            }
+            break;
+        }
+        case mccinfo::file_readers::game_hint::HALOREACH: {
+            mccinfo::file_readers::haloreach_theater_file_reader reader;
+            auto file_data_query = reader.Read(theater_file);
+            if (file_data_query.has_value()) {
+                file_data = file_data_query.value();
+                //theater_file_timestamp << file_data.utc_timestamp_;
+            }
+            break;
+        }
+        case mccinfo::file_readers::game_hint::HALO4: {
+            mccinfo::file_readers::halo4_theater_file_reader reader;
+            auto file_data_query = reader.Read(theater_file);
+            if (file_data_query.has_value()) {
+                file_data = file_data_query.value();
+                //theater_file_timestamp << file_data.utc_timestamp_;
+            }
+            break;
+        }
+        default:
+            break;
+        }
+    }
+    else {
+        MI_CORE_WARN("ReadTheaterFile() called with an empty theater file: {0}", theater_file.generic_string().c_str());
+    }
     return file_data;
+
 }
 namespace details {
 
@@ -420,6 +426,26 @@ template <class = class Dummy> class controller {
             }
 
             if (user_sm.is(boost::sml::state<states::in_menus>)) {
+
+                if (emi_.carnage_report_.has_value()) {
+                    std::filesystem::path to = std::filesystem::path(".\\mccinfo_cache\\autosave") /
+                                               emi_.carnage_report_.value().filename();
+
+                    auto temp = query::LookForMCCTempPath();
+                    if (temp.has_value()) {
+                        auto cr_parent = std::filesystem::path(temp.value()) / "Temporary";
+                        for (const auto &file : std::filesystem::directory_iterator(cr_parent)) {
+                            MI_CORE_TRACE("Comparing: {0} to {1}", file.path().generic_string().c_str(),emi_.carnage_report_.value().generic_string().c_str());
+                            if (file.path().filename() == emi_.carnage_report_.value().filename()) {
+                                MI_CORE_TRACE("Copying carnage report: {0}", file.path().generic_string().c_str());
+                                std::filesystem::copy_file(file.path(), to);
+                            }
+                        }
+
+                    }
+                    
+                }
+
                 mi.map = "";
                 emi_.base_map_ = std::nullopt;
                 emi_.theater_file_data_ = std::nullopt;
@@ -496,31 +522,38 @@ template <class = class Dummy> class controller {
                 autosave_client_.set_on_complete([this, hint, game](const std::filesystem::path &src, const
                                                                   std::filesystem::path &path) {
                     mccinfo::file_readers::game_hint hint_ = hint;
-                    std::wstring new_path = path.generic_wstring() + L"\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\";
-                    new_path += game;
-                    new_path += L"\\autosave";
-                    std::filesystem::path new_path_w = new_path;
-                    if (std::filesystem::exists(new_path_w) && std::filesystem::is_directory(new_path_w)) {
-                        for (const auto &entry : std::filesystem::directory_iterator(new_path_w)) {
+                    
+                    MI_CORE_TRACE("autosave_client post_callback executed with\n\tsrc_: {0}\n\tdst_: {1}", 
+                        src.generic_string().c_str(), path.generic_string().c_str());
+                    
+                    if (std::filesystem::exists(path) && std::filesystem::is_directory(path)) {
+                        for (const auto &entry : std::filesystem::directory_iterator(path)) {
                             const auto &path2 = entry.path();
-                            
+                            MI_CORE_TRACE("Looking for theater file data: {0}",
+                                          path2.generic_string().c_str());
                             if (std::filesystem::is_regular_file(path2)) {
                                 if ((path2.extension().generic_string() == ".temp") ||
                                     (path2.extension().generic_string() == ".film")) {
-                                    //MessageBox(NULL, path2.generic_wstring().c_str(), L"", MB_OK);
-                                    this->emi_.theater_file_data_ = ReadTheaterFile(std::filesystem::canonical(path2), hint_);
+                                    MI_CORE_INFO("Setting Extended Match Info Theater File to: {0}", path2.generic_string().c_str());
+                                    try {
+                                        this->emi_.theater_file_data_ = ReadTheaterFile(std::filesystem::canonical(path2), hint_);
+                                    }
+                                    catch (std::exception& e) {
+                                        MI_CORE_ERROR("fsm controller failed to read theater file data from {0} with exception: {1}", std::filesystem::canonical(path2).generic_string().c_str(), e.what());
+                                        this->emi_.theater_file_data_ = std::nullopt;
+                                    }
                                 }
                             }
                         }
                     }
 
-                    std::wstring del_path = (path.generic_wstring() + L"\\Users");
-                    RemoveDirectory(del_path.c_str());
-                    for (const auto &file : std::filesystem::directory_iterator(src)) {
-                        if (std::filesystem::is_regular_file(file.path())) {
-                            DeleteFile(file.path().generic_wstring().c_str());
-                        }
-                    }
+                    //std::wstring del_path = (path.generic_wstring() + L"\\Users");
+                    //RemoveDirectory(del_path.c_str());
+                    //for (const auto &file : std::filesystem::directory_iterator(src)) {
+                    //    if (std::filesystem::is_regular_file(file.path())) {
+                    //        DeleteFile(file.path().generic_wstring().c_str());
+                    //    }
+                    //}
                 });
 
                 // 5 second delay should be sufficient for h2a/h4
