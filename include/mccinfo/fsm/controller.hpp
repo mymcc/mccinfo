@@ -350,6 +350,7 @@ struct map_info {
 
 struct extended_match_info {
     std::optional<std::filesystem::path> base_map_;
+    std::optional<std::filesystem::path> carnage_report_;
     std::optional<mccinfo::file_readers::theater_file_data> theater_file_data_;
     std::optional<mccinfo::file_readers::game_hint> game_hint_;
 };
@@ -423,10 +424,12 @@ template <class = class Dummy> class controller {
                 emi_.base_map_ = std::nullopt;
                 emi_.theater_file_data_ = std::nullopt;
                 emi_.game_hint_ = std::nullopt;
+                emi_.carnage_report_ = std::nullopt;
             }
 
             if (user_sm.is(boost::sml::state<states::in_game>) && before_was_not_in_game) {
                 should_save_autosave = true;
+                should_id_cr = true;
             }
 
             if (should_save_autosave) {
@@ -527,6 +530,22 @@ template <class = class Dummy> class controller {
                 }
                 autosave_client_.request_copy(1000);
                 should_save_autosave = false;
+            }
+
+            // catch the carnagereport
+            if (user_sm.is(boost::sml::state<states::in_game>) && should_id_cr) {
+                if (predicates::events::temp_carnage_report_created(record, trace_context)) {
+                    krabs::schema schema(record, trace_context.schema_locator);
+                    krabs::parser parser(schema);
+                    std::wstring filename = parser.parse<std::wstring>(L"OpenPath");
+                    auto bytes = utility::ConvertWStringToBytes(filename);
+                    if (bytes.has_value()) {
+                        mi.map = bytes.value();
+                        emi_.carnage_report_ = bytes.value();
+                        emi_.carnage_report_.value().replace_extension();
+                        should_id_cr = false;
+                    }
+                }
             }
 
 
@@ -644,6 +663,7 @@ template <class = class Dummy> class controller {
 
     bool should_id_map = false;
     bool should_save_autosave = false;
+    bool should_id_cr = false;
 
   private: // filtering
     bool log_full = false;

@@ -120,6 +120,7 @@ inline auto campaign_map_file = krabs::predicates::property_icontains(L"OpenPath
 inline auto mainmenu_map_file = krabs::predicates::property_icontains(L"OpenPath", std::string("mainmenu.map"));
 inline auto theater_file = krabs::predicates::property_icontains(L"OpenPath", std::string(".mov"));
 inline auto temp_carnage_report = krabs::predicates::property_icontains(L"OpenPath", std::string(".xml.tmp"));
+inline auto backup_carnage_report = krabs::predicates::property_icontains(L"OpenPath", std::string(".xml.bak"));
 inline auto match_init_file     = krabs::predicates::property_icontains(L"OpenPath", std::string("init.txt"));
 inline auto match_launch_file   = krabs::predicates::property_icontains(L"OpenPath", std::string("launch.txt"));
 inline auto sound_file          = krabs::predicates::property_icontains(L"OpenPath", std::string(".fsb"));
@@ -221,6 +222,14 @@ inline krabs::predicates::none_of hdmu_map_file({
 
 inline krabs::predicates::none_of mainmenu_map_file({
     &likely_is::mainmenu_map_file,
+});
+
+inline krabs::predicates::none_of backup_carnage_report({
+    &likely_is::backup_carnage_report,
+});
+
+inline krabs::predicates::none_of temp_carnage_report({
+    &likely_is::temp_carnage_report,
 });
 
 } // certainly_not
@@ -331,6 +340,11 @@ inline krabs::predicates::all_of paused_game_gfx_file_created({
     &fio::file_create
 });
 
+inline krabs::predicates::all_of temp_carnage_report_created({
+    &likely_is::temp_carnage_report,
+    &fio::file_create
+});
+
 inline krabs::predicates::all_of mp_temp_carnage_report_created({
     &likely_is::temp_carnage_report,
     &contains::mpcarnagereport,
@@ -340,6 +354,11 @@ inline krabs::predicates::all_of mp_temp_carnage_report_created({
 inline krabs::predicates::all_of survival_temp_carnage_report_created({
     &likely_is::temp_carnage_report,
     &contains::survivalcarnagereport,
+    &fio::file_create
+});
+
+inline krabs::predicates::all_of backup_temp_carnage_report_created({
+    &likely_is::backup_carnage_report,
     &fio::file_create
 });
 
@@ -500,6 +519,7 @@ inline krabs::predicates::any_of file_create_targets({
     &likely_is::restartscreen_gfx_file,
     &likely_is::loadingscreen_gfx_file,
     &likely_is::temp_carnage_report,
+    &likely_is::backup_carnage_report,
     &likely_is::soundstream_pck_file,
     &likely_is::sound_file,
     &likely_is::map_file,
@@ -524,6 +544,11 @@ inline krabs::predicates::any_of file_create_targets({
 inline krabs::predicates::all_of accepted_file_creates({
     &fio::file_create,
     &file_create_targets
+});
+
+inline krabs::predicates::all_of accepted_file_deletes({
+    &fio::file_name_delete,
+    &likely_is::backup_carnage_report
 });
 
 inline krabs::predicates::any_of file_io_sizes({

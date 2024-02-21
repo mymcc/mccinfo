@@ -45,7 +45,11 @@ MCCFSM_INLINE theater_started_reach = edges::make_sequence(
     &predicates::events::haloreach_autosave_temp_file_created
 );
 
-MCCFSM_INLINE match_ended = edges::make_sequence(&predicates::events::mp_temp_carnage_report_created);
+MCCFSM_INLINE match_ended = edges::make_sequence(
+    &predicates::events::mp_temp_carnage_report_created,
+    &predicates::events::backup_temp_carnage_report_created,
+    &predicates::events::backup_temp_carnage_report_created
+);
 MCCFSM_INLINE firefight_ended = edges::make_sequence(&predicates::events::survival_temp_carnage_report_created);
 MCCFSM_INLINE game_unloaded = edges::make_sequence(&predicates::events::restartscreen_gfx_file_created);
 

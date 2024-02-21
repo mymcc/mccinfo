@@ -154,6 +154,13 @@ void Monitor::DoTheaterFileInfo() {
     auto emi = context_->get_extended_match_info();
     if (emi.theater_file_data_.has_value() ) {
         auto file_data = emi.theater_file_data_.value();
+        
+        if (emi.carnage_report_.has_value()) {
+            ImGui::Text("Carnage Report:");
+            ImGui::SameLine();
+            ImGui::Text("(%s)", emi.carnage_report_.value().generic_string().c_str());
+        }
+
         ImGui::Text("Theater File Author:");
         ImGui::SameLine();
         ImGui::Text("(%s)", file_data.author_.c_str());
@@ -244,6 +251,7 @@ void Monitor::OnUIRender() {
     ImGui::Text("Map:");
     ImGui::SameLine();
     ImGui::Text("(%s)", context_->get_map_info().c_str());
+
 
     DoTheaterFileInfo();
 
