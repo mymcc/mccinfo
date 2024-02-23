@@ -8,6 +8,7 @@
 #undef NOMINMAX
 
 #include <psapi.h>
+#include <gdiplus.h>
 
 #include <cstdint>
 #pragma warning(push)
@@ -345,5 +346,69 @@ inline std::vector<std::wstring> GetLoadedModulesFromProcessID(DWORD processID) 
 
     return modules;
 }
+
+inline int GetImageEncoderClsid(const WCHAR *format, CLSID *pClsid) {
+    UINT num = 0;
+    UINT size = 0;
+
+    Gdiplus::ImageCodecInfo *pImageCodecInfo = NULL;
+
+    Gdiplus::GetImageEncodersSize(&num, &size);
+    if (size == 0)
+        return -1;
+
+    pImageCodecInfo = (Gdiplus::ImageCodecInfo *)(malloc(size));
+    if (pImageCodecInfo == NULL)
+        return -1;
+
+    GetImageEncoders(num, size, pImageCodecInfo);
+    for (UINT j = 0; j < num; ++j) {
+        if (wcscmp(pImageCodecInfo[j].MimeType, format) == 0) {
+            *pClsid = pImageCodecInfo[j].Clsid;
+            free(pImageCodecInfo);
+            return j;
+        }
+    }
+    free(pImageCodecInfo);
+    return 0;
+}
+
+inline void ScreenCapture(RECT sr, const std::filesystem::path &save_to) {
+    Gdiplus::GdiplusStartupInput gdiplusStartupInput;
+    ULONG_PTR gdiplusToken;
+
+    Gdiplus::GdiplusStartup(&gdiplusToken, &gdiplusStartupInput, NULL);
+
+    { 
+        HDC scrdc, memdc;
+        HBITMAP membit;
+
+        scrdc = ::GetDC(0);
+
+        int w = abs(sr.right - sr.left);
+        int h = abs(sr.bottom - sr.top);
+
+        memdc = CreateCompatibleDC(scrdc);
+        membit = CreateCompatibleBitmap(scrdc, w, h);
+
+        HBITMAP hOldBitmap = (HBITMAP)SelectObject(memdc, membit);
+
+        BitBlt(memdc, 0, 0, w, h, scrdc, sr.left, sr.top, SRCCOPY);
+
+        Gdiplus::Bitmap bitmap(membit, NULL);
+        CLSID clsid;
+        
+        GetImageEncoderClsid(L"image/jpeg", &clsid);
+        bitmap.Save(save_to.generic_wstring().c_str(), &clsid, NULL);
+
+        DeleteObject(memdc);
+        DeleteObject(membit);
+        ::ReleaseDC(0, scrdc);
+    }
+
+
+    Gdiplus::GdiplusShutdown(gdiplusToken);
+}
+
 } // namespace utility
 } // namespace mccinfo

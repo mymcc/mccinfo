@@ -369,7 +369,6 @@ template <class = class Dummy> class controller {
         : mcc_sm{cbtable},
         user_sm{cbtable},
         game_id_sm{cbtable}, 
-        //autosave_client_("", "", "HoboCopy.exe")
         autosave_client_("", "", "TScopy_x64.exe")
     {
         MI_CORE_TRACE("Constructing fsm controller ...");
@@ -408,6 +407,20 @@ template <class = class Dummy> class controller {
 
             if (user_sm.is(boost::sml::state<states::loading_in>) && before_was_not_loading_in) {
                 should_id_map = true;
+
+                std::thread cap_t([]{
+                    std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+
+                    HWND hwnd = query::LookForMCCWindowHandle().value();
+
+                    RECT sr;
+                    GetWindowRect(hwnd, &sr);
+
+                    utility::ScreenCapture(sr, L".\\mccinfo_cache\\autosave\\loading_in.jpeg");
+                });
+
+                cap_t.detach();
+
             }
 
             if (should_id_map) {
@@ -436,9 +449,12 @@ template <class = class Dummy> class controller {
                         auto cr_parent = std::filesystem::path(temp.value()) / "Temporary";
                         for (const auto &file : std::filesystem::directory_iterator(cr_parent)) {
                             MI_CORE_TRACE("Comparing: {0} to {1}", file.path().generic_string().c_str(),emi_.carnage_report_.value().generic_string().c_str());
-                            if (file.path().filename() == emi_.carnage_report_.value().filename()) {
-                                MI_CORE_TRACE("Copying carnage report: {0}", file.path().generic_string().c_str());
-                                std::filesystem::copy_file(file.path(), to);
+                            if (std::filesystem::is_regular_file(file.path())) {
+                                if (file.path().filename() == emi_.carnage_report_.value().filename()) {
+                                    MI_CORE_INFO("Copying carnage report: {0}", file.path().generic_string().c_str());
+                                    std::filesystem::copy_file(file.path(), to);
+                                    break;
+                                }
                             }
                         }
 
@@ -546,14 +562,6 @@ template <class = class Dummy> class controller {
                             }
                         }
                     }
-
-                    //std::wstring del_path = (path.generic_wstring() + L"\\Users");
-                    //RemoveDirectory(del_path.c_str());
-                    //for (const auto &file : std::filesystem::directory_iterator(src)) {
-                    //    if (std::filesystem::is_regular_file(file.path())) {
-                    //        DeleteFile(file.path().generic_wstring().c_str());
-                    //    }
-                    //}
                 });
 
                 // 5 second delay should be sufficient for h2a/h4

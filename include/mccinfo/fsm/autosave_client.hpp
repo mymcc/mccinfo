@@ -140,7 +140,6 @@ public:
                     break;
                 }
 
-
                 if (copy_delay_ms_ > 0) {
                     MI_CORE_TRACE("autosave_client waiting {0} ms to copy from src", std::to_string(copy_delay_ms_).c_str());
                     std::this_thread::sleep_for(std::chrono::milliseconds(copy_delay_ms_));
@@ -166,7 +165,6 @@ public:
                     MI_CORE_TRACE("Executing autosave_client post_callback_ ...");
                     post_callback_(src_, dst_);
                 }
-
 
                 else if (error_callback_){
                     error_callback_(GetLastError());

@@ -3,6 +3,7 @@
 #pragma comment(lib, "Version.lib")
 #pragma comment(lib, "Psapi.lib")
 #pragma comment(lib, "Pathcch.lib")
+#pragma comment(lib, "gdiplus.lib")
 
 #include "mccinfo/utility.hpp"
 #include "mccinfo/constants.hpp"
