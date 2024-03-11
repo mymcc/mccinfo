@@ -4,6 +4,7 @@ namespace mccinfo {
 namespace fsm {
 
 namespace details {
+/*
 inline void flatten(
     const std::filesystem::path & current_root_path, 
     const std::filesystem::path & target_root_path) {
@@ -78,6 +79,47 @@ inline void flatten(
 
     FindClose(hFind);
 }
+*/
+
+inline void flatten(const std::filesystem::path &current_root_path,
+                    const std::filesystem::path &target_root_path) {
+    for (const auto &entry : std::filesystem::directory_iterator(current_root_path)) {
+        const std::filesystem::path &file_path = entry.path();
+
+        // Skip '.' and '..' directories
+        if (file_path.filename() == "." || file_path.filename() == "..") {
+            continue;
+        }
+
+        // Check if found entity is a directory
+        if (entry.is_directory()) {
+            // Recursively flatten the found directory
+            flatten(file_path, target_root_path);
+            // Attempt to remove the now-empty directory
+            try {
+                std::filesystem::remove(file_path);
+            } catch (const std::exception &e) {
+                std::cerr << "Failed to remove directory: " << file_path << ", error: " << e.what()
+                          << std::endl;
+            }
+        } else {
+            // Construct new file path in the root directory
+            const std::filesystem::path &new_file_path = target_root_path / file_path.filename();
+
+            try {
+                // only copy and delete if we aren't in targetRootPath
+                if (current_root_path != target_root_path) {
+                    std::filesystem::copy_file(file_path, new_file_path,
+                                               std::filesystem::copy_options::overwrite_existing);
+                    std::filesystem::remove(file_path);
+                }
+            } catch (const std::exception &e) {
+                std::cerr << "Failed to move " << file_path << " to " << new_file_path
+                          << ", error: " << e.what() << std::endl;
+            }
+        }
+    }
+}
 } // namespace details
 
 class autosave_client {
@@ -102,7 +144,9 @@ public:
         dst_ = new_dst;
     }
 
-    void set_on_copy_start(std::function<void(const std::filesystem::path &)> pre_callback) {
+    void set_on_copy_start(
+        std::function<void(const std::filesystem::path &, const std::filesystem::path &)>
+            pre_callback) {
         std::unique_lock<std::mutex> lock(mut_);
         pre_callback_ = pre_callback;
     }
@@ -125,18 +169,22 @@ public:
 
     void start() {
         copy_thread_ = std::thread([&] { 
-            std::unique_lock<std::mutex> lock(mut_);
 
             while (true) {
+                std::unique_lock<std::mutex> lock(mut_);
                 MI_CORE_TRACE("autosave_client waiting for request ...");
 
                 cv_.wait(lock, [&] { return start_copy_ || stop_; });
-
-                if (start_copy_)
+                
+                
+                if (start_copy_) {
                     MI_CORE_TRACE("autosave_client received request to copy from src: {0}",
                                   std::filesystem::absolute(src_).generic_string().c_str());
+                }
+                
                 if (stop_) {
                     MI_CORE_TRACE("autosave_client stopping ...");
+                    stop_ = false;
                     break;
                 }
 
@@ -149,7 +197,7 @@ public:
 
                 if (pre_callback_) {
                     MI_CORE_TRACE("Executing autosave_client pre_callback_ ...");
-                    pre_callback_(dst_);
+                    pre_callback_(src_, dst_);
                 }
 
                 bool success = do_copy();
@@ -177,16 +225,23 @@ public:
     }
 
     void stop() {
-        std::unique_lock<std::mutex> lock(mut_);
-        stop_ = true;
+        {
+            std::unique_lock<std::mutex> lock(mut_);
+            stop_ = true;
+        }
         cv_.notify_one();
     }
 
     void request_copy(uint32_t delay_ms = 0) {
-        std::unique_lock<std::mutex> lock(mut_);
-        start_copy_ = true;
-        copy_delay_ms_ = delay_ms;
+        {
+            std::unique_lock<std::mutex> lock(mut_);
+            MI_CORE_TRACE("autosave_client: request_copy()\n\tlock acquired");
+            start_copy_ = true;
+            copy_delay_ms_ = delay_ms;
+        }
+        MI_CORE_TRACE("autosave_client: request_copy()\n\tlock released");
         cv_.notify_one();
+        MI_CORE_TRACE("autosave_client: request_copy()\n\tthread notified");
     }
 
 private:
@@ -240,7 +295,7 @@ private:
     std::filesystem::path src_;
     std::filesystem::path dst_;
     std::filesystem::path host_;
-    std::function<void(const std::filesystem::path &)> pre_callback_;
+    std::function<void(const std::filesystem::path &, const std::filesystem::path &)> pre_callback_;
     std::function<void(const std::filesystem::path &, const std::filesystem::path &)> post_callback_;
     std::function<void(DWORD)> error_callback_;
     bool flatten_on_write_ = false;

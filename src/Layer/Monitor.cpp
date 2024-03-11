@@ -19,6 +19,9 @@ std::pair<ImVec2, ImVec2> GetItemRectMaintainAspectRatio(uint32_t width, uint32_
 
 
 Monitor::Monitor() {
+    MI_CORE_TRACE("mccinfo-monitor launched at {0}", utility::CurrentTimestampISO().c_str());
+
+
     /*
   //m_TexturePacksPath = std::filesystem::path(__FILE__).parent_path().parent_path().parent_path();
   m_TexturePacksPath = std::filesystem::path(std::filesystem::current_path()).parent_path().parent_path().parent_path();
@@ -98,10 +101,10 @@ Monitor::Monitor() {
 
 }
 
-uint32_t GetColorFromTeam(int team, mccinfo::file_readers::game_hint hint) {
+uint32_t GetColorFromTeam(int team, mccinfo::game_hint hint) {
     switch (hint) {
-        case mccinfo::file_readers::game_hint::HALO3:
-        case mccinfo::file_readers::game_hint::HALOREACH: {
+        case mccinfo::game_hint::HALO3:
+        case mccinfo::game_hint::HALOREACH: {
             switch (team) {
                 case -1: return mccinfo::constants::colors::team::FFA;
                 case 0:  return mccinfo::constants::colors::team::RED;
@@ -116,7 +119,7 @@ uint32_t GetColorFromTeam(int team, mccinfo::file_readers::game_hint hint) {
             }
             break;
         }
-        case mccinfo::file_readers::game_hint::HALO4: {
+        case mccinfo::game_hint::HALO4: {
             switch (team) {
                 case -1: return mccinfo::constants::colors::team::FFA;
                 case 0:  return mccinfo::constants::colors::team::RED;
@@ -131,7 +134,7 @@ uint32_t GetColorFromTeam(int team, mccinfo::file_readers::game_hint hint) {
             }
             break;
         }
-        case mccinfo::file_readers::game_hint::HALO2A: {
+        case mccinfo::game_hint::HALO2A: {
             switch (team) {
                 case -1: return mccinfo::constants::colors::team::FFA;
                 case 0:  return mccinfo::constants::colors::team::RED;

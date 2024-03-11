@@ -6,6 +6,17 @@
 
 #include "frozen/unordered_map.h"
 namespace mccinfo {
+
+enum class game_hint {
+    HALO1,
+    HALO2,
+    HALO3,
+    HALO3ODST,
+    HALOREACH,
+    HALO4,
+    HALO2A
+};
+
 namespace constants {
 
 #define BITFLAG(x) \

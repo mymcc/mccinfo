@@ -34,6 +34,30 @@ namespace events {
 		events::haloreach_found,
 		events::game_exit,
 		events::match_paused>;
+
+
+inline event_t GetGameFromPath(const std::filesystem::path &path) {
+    if      (utility::PathContains(path, "Halo1"))      return events::haloce_found{};
+    else if (utility::PathContains(path, "Halo2A"))     return events::halo2a_found{};
+    else if (utility::PathContains(path, "Halo2"))      return events::halo2_found{};
+    else if (utility::PathContains(path, "Halo3ODST"))  return events::halo3odst_found{};
+    else if (utility::PathContains(path, "Halo3"))      return events::halo3_found{};
+    else if (utility::PathContains(path, "Halo4"))      return events::halo4_found{};
+    else if (utility::PathContains(path, "HaloReach"))  return events::haloreach_found{};
+    else throw std::runtime_error("GetGameFromPath(): game not found");
+}
+
+inline event_t GetGameEventFromHint(const game_hint& hint) {
+    switch (hint) { 
+    case game_hint::HALO1:      return events::haloce_found{};
+    case game_hint::HALO2:      return events::halo2_found{};
+    case game_hint::HALO3:      return events::halo3_found{};
+    case game_hint::HALO3ODST:  return events::halo3odst_found{};
+    case game_hint::HALOREACH:  return events::haloreach_found{};
+    case game_hint::HALO4:      return events::halo4_found{};
+    case game_hint::HALO2A:     return events::halo2a_found{};
+    }
+}
 }
 }
 }

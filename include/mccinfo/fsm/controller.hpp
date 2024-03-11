@@ -12,223 +12,12 @@
 #include "mccinfo/fsm/machines/game_id.hpp"
 
 #include "edges/edges.hpp"
-#include <iostream>
 #include <string>
-#include <ostream> 
 
 namespace mccinfo {
 namespace fsm {
 
-inline events::event_t get_game_from_path(const std::wstring &file) {
-    if (file.find(L"Halo1") != std::wstring::npos)
-        return events::haloce_found{};
-    else if (file.find(L"Halo2") != std::wstring::npos)
-        return events::halo2_found{};
-    else if (file.find(L"Halo2A") != std::wstring::npos)
-        return events::halo2a_found{};
-    else if (file.find(L"Halo3") != std::wstring::npos)
-        return events::halo3_found{};
-    else if (file.find(L"Halo3ODST") != std::wstring::npos)
-        return events::halo3odst_found{};
-    else if (file.find(L"Halo4") != std::wstring::npos)
-        return events::halo4_found{};
-    else if (file.find(L"HaloReach") != std::wstring::npos)
-        return events::haloreach_found{};
-    else
-        throw std::runtime_error("get_game_from_path(): game not found");
-}
 
-inline bool file_has_open_handle(const std::wstring &file) {
-    HANDLE hFile = CreateFileW(file.c_str(),   // name of the write
-                       GENERIC_WRITE,          // open for writing
-                       0,                      // *** do not share ***
-                       NULL,                   // default security
-                       OPEN_EXISTING,          // create new file only
-                       FILE_ATTRIBUTE_NORMAL,  // normal file
-                       NULL);                  // no attr. template
-
-    if ((hFile == INVALID_HANDLE_VALUE) && (GetLastError() == ERROR_SHARING_VIOLATION)) {
-        auto bytes = utility::ConvertWStringToBytes(file);
-        if (bytes.has_value()) {
-            MI_CORE_TRACE("Sharing violation, file is guaranteed to have an open handle restricting access: {0}", bytes.value());
-        }
-        else {
-            MI_CORE_TRACE("Sharing violation, file is guaranteed to have an open handle restricting access: Error logging file");
-        }
-        return true;
-    }
-    else {
-        CloseHandle(hFile);
-        return false;
-    }
-}
-
-inline std::optional<events::event_t> identify_game() {
-    std::wstring prefix(L"F:\\SteamLibrary\\steamapps\\common\\Halo The Master Chief "
-                        "Collection\\");
-
-    std::wstring temp_prefix(L"C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Config\\");
-    // halo1
-    {
-        std::wstring path = prefix + L"halo1\\sound\\pc\\sounds_stream.fsb";
-        if (file_has_open_handle(path)) {
-            return events::haloce_found{};
-        }
-    }
-
-    // halo 2
-    {
-        // need to discern between h2 and h2a
-        std::wstring pref_path = temp_prefix + L"Halo2\\preferences.dat";
-
-        // halo2 classic mp/or h2/h2a campaign
-        if (file_has_open_handle(pref_path)) {
-            return events::halo2_found{}; 
-        }
-
-        // h2a mp
-        std::wstring map_path = prefix + L"groundhog\\maps\\shared.map";
-        if (file_has_open_handle(map_path)) {
-            return events::halo2a_found{};
-        }
-    }
-
-    // halo 3
-    {
-        std::wstring path = prefix + L"halo3\\maps\\shared.map";
-        if (file_has_open_handle(path)) {
-            return events::halo3_found{};
-        }
-    }
-
-    // halo 4
-    {
-        std::wstring path = prefix + L"halo4\\maps\\shared.map";
-        if (file_has_open_handle(path)) {
-            return events::halo4_found{};
-        }
-    }
-
-    // halo reach
-    {
-        std::wstring path = prefix + L"haloreach\\maps\\shared.map";
-        if (file_has_open_handle(path)) {
-            return events::haloreach_found{};
-        }
-    }
-
-    return std::nullopt;
-}
-
-inline void print_trace_event(std::wostringstream& woss, const EVENT_RECORD &record,
-                                               const krabs::trace_context &trace_context) {
-    woss << L"\t";
-    krabs::schema schema(record, trace_context.schema_locator);
-    krabs::parser parser(schema);
-    
-    try {
-        if (schema.event_opcode() != 11) { // Prevent Process_Terminate (Event Version(2))
-            if (schema.event_opcode() != 64) {
-                if (schema.event_opcode() != 67) {
-                    if ((schema.event_opcode() == 3) && ((std::wstring(schema.task_name()).find(L"Process") == std::wstring::npos))) {
-
-                        std::wstring imagefilename = parser.parse<std::wstring>(L"FileName");
-                        std::uint32_t pid = parser.parse<std::uint32_t>(L"ProcessId");
-
-                        woss << schema.task_name() << L"_" << schema.opcode_name();
-                        woss << L" (" << schema.event_opcode() << L") ";
-                        woss << L" ProcessId=" << pid;
-                        woss << L" ImageFileName=" << imagefilename;
-                        
-                    } else {
-                        std::string imagefilename = parser.parse<std::string>(L"ImageFileName");
-                        std::uint32_t pid = parser.parse<std::uint32_t>(L"ProcessId");
-                        woss << schema.task_name() << L"_" << schema.opcode_name();
-                        woss << L" (" << schema.event_opcode() << L") ";
-                        woss << L" ProcessId=" << pid;
-                        auto ws = utility::ConvertBytesToWString(imagefilename);
-                        if (ws.has_value())
-                            woss << L" ImageFileName=" << ws.value();
-                    }
-                } else {
-                    uint32_t ttid = parser.parse<uint32_t>(L"TTID");
-                    uint32_t io_size = parser.parse<uint32_t>(L"IoSize");
-
-                    woss << schema.task_name() << L"_" << schema.opcode_name();
-                    woss << L" (" << schema.event_opcode() << L") ";
-                    woss << L" pid=" << std::to_wstring(record.EventHeader.ProcessId);
-                    woss << L" ttid=" << std::to_wstring(ttid);
-                    woss << L" IoSize=" << std::to_wstring(io_size);
-                }
-            } else {
-                std::wstring imagefilename = parser.parse<std::wstring>(L"OpenPath");
-                woss << schema.task_name() << L"_" << schema.opcode_name();
-                woss << L" (" << schema.event_opcode() << L") ";
-                woss << " Path=" << imagefilename;
-            }
-            woss << std::endl;
-        }
-    }
-    catch (const std::exception& exc) {
-        std::cerr << exc.what();
-        throw std::runtime_error("hi :)))))))))))");
-    }
-}
-
-
-inline mccinfo::file_readers::theater_file_data ReadTheaterFile(const std::filesystem::path &theater_file,
-                     mccinfo::file_readers::game_hint hint) {
-    //theater_file_timestamp.str("");
-    mccinfo::file_readers::theater_file_data file_data;
-
-    if (std::filesystem::file_size(theater_file) > 0) {
-        switch (hint) {
-        case mccinfo::file_readers::game_hint::HALO2A: {
-            mccinfo::file_readers::halo2a_theater_file_reader reader;
-            auto file_data_query = reader.Read(theater_file);
-            if (file_data_query.has_value()) {
-                file_data = file_data_query.value();
-                //theater_file_timestamp << file_data.utc_timestamp_;
-            }
-            break;
-        }
-        case mccinfo::file_readers::game_hint::HALO3: {
-            mccinfo::file_readers::halo3_theater_file_reader reader;
-            auto file_data_query = reader.Read(theater_file);
-            if (file_data_query.has_value()) {
-                file_data = file_data_query.value();
-                //theater_file_timestamp << file_data.utc_timestamp_;
-            }
-            break;
-        }
-        case mccinfo::file_readers::game_hint::HALOREACH: {
-            mccinfo::file_readers::haloreach_theater_file_reader reader;
-            auto file_data_query = reader.Read(theater_file);
-            if (file_data_query.has_value()) {
-                file_data = file_data_query.value();
-                //theater_file_timestamp << file_data.utc_timestamp_;
-            }
-            break;
-        }
-        case mccinfo::file_readers::game_hint::HALO4: {
-            mccinfo::file_readers::halo4_theater_file_reader reader;
-            auto file_data_query = reader.Read(theater_file);
-            if (file_data_query.has_value()) {
-                file_data = file_data_query.value();
-                //theater_file_timestamp << file_data.utc_timestamp_;
-            }
-            break;
-        }
-        default:
-            break;
-        }
-    }
-    else {
-        MI_CORE_WARN("ReadTheaterFile() called with an empty theater file: {0}", theater_file.generic_string().c_str());
-    }
-    return file_data;
-
-}
 namespace details {
 
 class filtering_context {
@@ -303,7 +92,7 @@ class filtering_context {
                                     "Collection\\mcc\\Content\\Movies\\");
                 target += wstr;
 
-                auto open = file_has_open_handle(target);
+                auto open = utility::FileHasOpenHandle(target);
 
                 if (open)
                     switch_to_in_match = false;
@@ -311,14 +100,16 @@ class filtering_context {
 
             if (switch_to_in_match) {
 
-                auto game_event = identify_game();
+                auto game_hint = query::IdentifyCurrentGame(
+                    L"F:\\SteamLibrary\\steamapps\\common\\Halo The Master Chief "
+                    "Collection");
 
-                if (game_event.has_value()) {
+                if (game_hint.has_value()) {
                     std::wcout << L"\t\tSending Artificial match_found Event: " << L"\n";
                     user_sm.process_event(events::match_found{});
                     std::wcout << L"\t\tSending Artificial game_event Event: " << L"\n";
                     std::visit([&](auto &&evt) { game_id_sm.process_event(evt); },
-                               game_event.value());
+                                events::GetGameEventFromHint(game_hint.value()));
                 } else {
                     std::wcout << L"\t\tSending Artificial launch_identified Event: " << L"\n";
                     user_sm.process_event(events::launch_identified{});
@@ -343,8 +134,8 @@ class filtering_context {
 
   private:
     uint32_t mcc_pid = UINT32_MAX;
-    bool mcc_on = false;
     bool done_identification = false;
+    bool mcc_on = false;
 };
 
 struct map_info {
@@ -358,7 +149,14 @@ struct extended_match_info {
     std::optional<std::filesystem::path> base_map_;
     std::optional<std::filesystem::path> carnage_report_;
     std::optional<mccinfo::file_readers::theater_file_data> theater_file_data_;
-    std::optional<mccinfo::file_readers::game_hint> game_hint_;
+    std::optional<mccinfo::game_hint> game_hint_;
+
+    void reset() {
+        base_map_ = std::nullopt;
+        theater_file_data_ = std::nullopt;
+        game_hint_ = std::nullopt;
+        carnage_report_ = std::nullopt;
+    }
 };
 
 template <class = class Dummy> class controller {
@@ -368,21 +166,102 @@ template <class = class Dummy> class controller {
     controller(callback_table& cbtable)
         : mcc_sm{cbtable},
         user_sm{cbtable},
-        game_id_sm{cbtable}, 
+        game_id_sm{cbtable},
+        cb_table_{cbtable},
         autosave_client_("", "", "TScopy_x64.exe")
     {
         MI_CORE_TRACE("Constructing fsm controller ...");
 
 
         find_mcc_installations();
+        add_match_data_collector_callbacks();
+        emi_.reset();
 
 
+        autosave_client_.set_on_copy_start(
+            [&](const std::filesystem::path &src, const std::filesystem::path &dst) {
 
-        autosave_client_.set_on_copy_start([&](const std::filesystem::path &path) { 
-            for (const auto &file : std::filesystem::directory_iterator(path)) {
+            std::vector<std::filesystem::path> film_files;
+            std::vector<std::filesystem::path> map_files;
+            std::vector<std::filesystem::path> game_files;
+
+            for (const auto &file : std::filesystem::directory_iterator(src)) {
                 if (std::filesystem::is_regular_file(file.path())) {
-                    DeleteFile(file.path().generic_wstring().c_str());
+                    if (file.path().extension() == ".film") {
+                        film_files.push_back(file.path());
+                    }
+                    else if (file.path().extension() == ".map") {
+                        map_files.push_back(file.path());
+                    } 
+                    else if (file.path().extension() == ".game") {
+                        game_files.push_back(file.path());
+                    }
                 }
+            }
+
+            std::sort(map_files.begin(), map_files.end(), utility::by_last_file_write_time);
+            std::sort(game_files.begin(), game_files.end(), utility::by_last_file_write_time);
+
+            if (!map_files.empty())
+                map_files.pop_back();
+
+            if (!game_files.empty())
+                game_files.pop_back();
+
+            // find newest .map, remove it, put the rest in usercontent
+            // find newest .game, remove it, put the rest in usercontent
+            // put all .films in usercontent
+
+            std::string temp = "C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\UserContent\\" +
+                               src.parent_path().filename().generic_string();
+
+            for (const auto& file : film_files) {
+                auto target = std::filesystem::path(temp + "\\Movie\\" + file.filename().generic_string());
+
+                MI_CORE_TRACE("Copying extraneous autosave .FILM file:\n\tSubject: {0}\n\tTo: {1}",
+                              file.generic_string().c_str(), target.generic_string().c_str());
+
+                try {
+                    std::filesystem::copy_file(
+                        file, target);
+
+                    std::filesystem::remove(file);
+                }
+                catch (std::exception& e) {
+                    MI_CORE_ERROR("Filesystem Error\nException: {0}", e.what());
+                }
+            }
+            for (const auto &file : map_files) {
+                auto target =
+                    std::filesystem::path(temp + "\\Map\\" + file.filename().generic_string());
+
+                MI_CORE_TRACE("Copying extraneous autosave .MAP file:\n\tSubject: {0}\n\tTo: {1}",
+                              file.generic_string().c_str(), target.generic_string().c_str());
+
+                try {
+                    std::filesystem::copy_file(file, target);
+
+                    std::filesystem::remove(file);
+                } catch (std::exception &e) {
+                    MI_CORE_ERROR("Filesystem Error\nException: {0}", e.what());
+                }
+
+            }
+            for (const auto &file : game_files) {
+                auto target =
+                    std::filesystem::path(temp + "\\GameType\\" + file.filename().generic_string());
+
+                MI_CORE_TRACE("Copying extraneous autosave .GAME file:\n\tSubject: {0}\n\tTo: {1}",
+                              file.generic_string().c_str(), target.generic_string().c_str());
+
+                try {
+                    std::filesystem::copy_file(file, target);
+
+                    std::filesystem::remove(file);
+                } catch (std::exception &e) {
+                    MI_CORE_ERROR("Filesystem Error\nException: {0}", e.what());
+                }
+
             }
         });
 
@@ -398,30 +277,13 @@ template <class = class Dummy> class controller {
         utility::atomic_guard lk(lock);
 
         bool before_was_not_loading_in = !user_sm.is(boost::sml::state<states::loading_in>);
+        bool before_was_not_loading_out = !user_sm.is(boost::sml::state<states::loading_out>);
         bool before_was_not_in_game = !user_sm.is(boost::sml::state<states::in_game>);
 
         if (fc.should_handle_trace_event(record, trace_context)) {
             fc.mcc_sm_event_wrapper(*this, mcc_sm, record, trace_context);
             fc.user_sm_event_wrapper(*this, user_sm, game_id_sm, record, trace_context);
             handle_trace_event_impl<decltype(game_id_sm)>(game_id_sm, record, trace_context);
-
-            if (user_sm.is(boost::sml::state<states::loading_in>) && before_was_not_loading_in) {
-                should_id_map = true;
-
-                std::thread cap_t([]{
-                    std::this_thread::sleep_for(std::chrono::milliseconds(4000));
-
-                    HWND hwnd = query::LookForMCCWindowHandle().value();
-
-                    RECT sr;
-                    GetWindowRect(hwnd, &sr);
-
-                    utility::ScreenCapture(sr, L".\\mccinfo_cache\\autosave\\loading_in.jpeg");
-                });
-
-                cap_t.detach();
-
-            }
 
             if (should_id_map) {
                 // make predicate event more clear (specific map pred)
@@ -438,60 +300,174 @@ template <class = class Dummy> class controller {
                 }   
             }
 
-            if (user_sm.is(boost::sml::state<states::in_menus>)) {
+            if (should_copy_cr) {
+                // should really be on LOADING_OUT | STATE_EXIT
+                if (!user_sm.is(boost::sml::state<states::loading_out>) &&
+                    !user_sm.is(boost::sml::state<states::in_game>)) {
 
-                if (emi_.carnage_report_.has_value()) {
-                    std::filesystem::path to = std::filesystem::path(".\\mccinfo_cache\\autosave") /
-                                               emi_.carnage_report_.value().filename();
+                    if (emi_.carnage_report_.has_value()) {
+                        std::filesystem::path to = std::filesystem::path(".\\mccinfo_cache\\autosave") /
+                                                    emi_.carnage_report_.value().filename();
 
-                    auto temp = query::LookForMCCTempPath();
-                    if (temp.has_value()) {
-                        auto cr_parent = std::filesystem::path(temp.value()) / "Temporary";
-                        for (const auto &file : std::filesystem::directory_iterator(cr_parent)) {
-                            MI_CORE_TRACE("Comparing: {0} to {1}", file.path().generic_string().c_str(),emi_.carnage_report_.value().generic_string().c_str());
-                            if (std::filesystem::is_regular_file(file.path())) {
-                                if (file.path().filename() == emi_.carnage_report_.value().filename()) {
-                                    MI_CORE_INFO("Copying carnage report: {0}", file.path().generic_string().c_str());
-                                    std::filesystem::copy_file(file.path(), to);
-                                    break;
+                        auto temp = query::LookForMCCTempPath();
+                        if (temp.has_value()) {
+                            auto cr_parent = std::filesystem::path(temp.value()) / "Temporary";
+                            for (const auto &file : std::filesystem::directory_iterator(cr_parent)) {
+                                MI_CORE_TRACE("Comparing: {0} to {1}", 
+                                    file.path().generic_string().c_str(),
+                                    emi_.carnage_report_.value().generic_string().c_str());
+
+                                if (std::filesystem::is_regular_file(file.path())) {
+                                    if (file.path().filename() == emi_.carnage_report_.value().filename()) {
+                                        MI_CORE_INFO("Copying carnage report: {0}", 
+                                            file.path().generic_string().c_str());
+
+                                        try {
+                                            std::filesystem::copy_file(file.path(), to);
+                                        } catch (std::exception &e) {
+                                            MI_CORE_ERROR("Error copying file {0}\nException: {1}",
+                                                          file.path().generic_string().c_str(),
+                                                          e.what());
+                                        }
+                                        break;
+                                    }
                                 }
+                            }
+
+                        }
+                    
+                    }
+                    // we didn't identify a cr on exit (likely firefight or campaign)
+                    else 
+                    {
+                        MI_CORE_WARN("No carnage report identified on loading_out, searching MCC Temp Path for latest carnage report ...");
+
+                        auto temp = query::LookForMCCTempPath();
+                        if (temp.has_value()) {
+                            auto cr_parent = std::filesystem::path(temp.value()) / "Temporary";
+
+                        
+                            std::filesystem::path latest_cr;
+                            std::filesystem::file_time_type latest_cr_write =
+                                std::filesystem::file_time_type::clock::time_point(std::chrono::seconds(0));
+
+                            for (const auto &file : std::filesystem::directory_iterator(cr_parent)) {
+                                if (std::filesystem::is_regular_file(file.path()) && file.path().has_extension()) {
+                                    if (file.path().extension().generic_string() == ".xml") {
+
+                                        bool newer = file.last_write_time() > latest_cr_write;
+
+                                        MI_CORE_TRACE("Comparing write times: ({0} > {1}) ? => {2}",
+                                                      file.path().generic_string().c_str(),
+                                                      latest_cr.generic_string().c_str(),
+                                                      (newer) ? "true" : "false"
+                                        );
+
+                                        if (newer) {
+                                            MI_CORE_WARN("Latest carnage report is now: {0}",
+                                                         file.path().generic_string().c_str()
+                                            );
+
+                                            latest_cr = file.path();
+                                            latest_cr_write = file.last_write_time();
+                                        }
+                                    }
+                                }
+                            }
+
+                            MI_CORE_INFO("Copying carnage report: {0}",
+                                         latest_cr.generic_string().c_str());
+
+                            std::filesystem::path to =
+                                std::filesystem::path(".\\mccinfo_cache\\autosave") /
+                                latest_cr.filename();
+                            try {
+                                std::filesystem::copy_file(latest_cr, to);
+                            }
+                            catch (std::exception& e) {
+                                MI_CORE_ERROR("Error copying file {0}\nException: {1}",
+                                              latest_cr.generic_string().c_str(), e.what()
+                                );
+                            }
+
+
+                        
+                        }
+                    }
+
+                    // here carnage reports are chronologically the last file related to the match written,
+                    // therefore on its copy we can also take the autosave cache and make it a match in /matches
+                    std::string iso_basename = utility::CurrentTimestampISO();
+
+                    iso_basename.erase(
+                        std::remove(iso_basename.begin(), iso_basename.end(), ':'),
+                        iso_basename.end());
+
+                    auto match_to = std::filesystem::path(".\\mccinfo_cache\\matches") /
+                                    iso_basename;
+
+                    MI_CORE_TRACE(
+                        "Attempting to construct match with:\n\tbasename: {0}\n\tpath: {1}",
+                        iso_basename.c_str(), match_to.generic_string().c_str());
+
+                    try {
+
+                        std::filesystem::create_directories(match_to);
+                        
+                        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+                        MI_CORE_TRACE("Copying autosave cache to {0}", match_to.generic_string().c_str());
+
+                        std::filesystem::copy(std::filesystem::path(".\\mccinfo_cache\\autosave"),
+                                              match_to);
+                        for (const auto entry : std::filesystem::directory_iterator(
+                            std::filesystem::path(".\\mccinfo_cache\\autosave"))) {
+
+                            if (std::filesystem::is_regular_file(entry.path())) {
+                                MI_CORE_WARN("Removing file: {0}",
+                                             entry.path().generic_string().c_str());
+                                std::filesystem::remove(entry.path());
                             }
                         }
 
-                    }
-                    
-                }
+                        MI_CORE_INFO("Success?");
 
-                mi.map = "";
-                emi_.base_map_ = std::nullopt;
-                emi_.theater_file_data_ = std::nullopt;
-                emi_.game_hint_ = std::nullopt;
-                emi_.carnage_report_ = std::nullopt;
+                    } catch (std::exception &e) {
+                        MI_CORE_ERROR("Error copying autosave cache\nException: {0}",
+                                        e.what());
+                    }
+
+                    mi.map = "";
+
+                    emi_.reset();
+                    should_copy_cr = false;
+                }
             }
 
             if (user_sm.is(boost::sml::state<states::in_game>) && before_was_not_in_game) {
                 should_save_autosave = true;
                 should_id_cr = true;
+                should_copy_cr = true;
             }
 
             if (should_save_autosave) {
                 std::string temp = "C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\";
                 std::wstring game = L"";
-                mccinfo::file_readers::game_hint hint = mccinfo::file_readers::game_hint::HALO3;
+                mccinfo::game_hint hint = mccinfo::game_hint::HALO3;
 
                 assert(!game_id_sm.is(boost::sml::state<states::none>));
 
                 if (game_id_sm.is(boost::sml::state<states::haloce>)) {
                     temp += "Halo1";
                     game = L"Halo1";
-                    hint = mccinfo::file_readers::game_hint::HALO1;
+                    hint = mccinfo::game_hint::HALO1;
                     //MessageBox(NULL, L"HALO1", L"", MB_OK);
 
                 } else if (game_id_sm.is(boost::sml::state<states::halo2>)) {
                     temp += "Halo2";
                     game = L"Halo2";
 
-                    hint = mccinfo::file_readers::game_hint::HALO2;
+                    hint = mccinfo::game_hint::HALO2;
                     //MessageBox(NULL, L"HALO2", L"", MB_OK);
 
 
@@ -499,33 +475,33 @@ template <class = class Dummy> class controller {
                     temp += "Halo3";
                     game = L"Halo3";
 
-                    hint = mccinfo::file_readers::game_hint::HALO3;
+                    hint = mccinfo::game_hint::HALO3;
                     //MessageBox(NULL, L"HALO3", L"", MB_OK);
 
                 } else if (game_id_sm.is(boost::sml::state<states::halo3odst>)) {
                     temp += "Halo3ODST";
                     game = L"Halo3ODST";
 
-                    hint = mccinfo::file_readers::game_hint::HALO3;
+                    hint = mccinfo::game_hint::HALO3;
                     //MessageBox(NULL, L"HALO3ODST", L"", MB_OK);
 
                 } else if (game_id_sm.is(boost::sml::state<states::haloreach>)) {
                     temp += "HaloReach";
                     game = L"HaloReach";
 
-                    hint = mccinfo::file_readers::game_hint::HALOREACH;
+                    hint = mccinfo::game_hint::HALOREACH;
                     //MessageBox(NULL, L"HALOREACH", L"", MB_OK);
 
                 } else if (game_id_sm.is(boost::sml::state<states::halo4>)) {
                     temp += "Halo4";
                     game = L"Halo4";
-                    hint = mccinfo::file_readers::game_hint::HALO4;
+                    hint = mccinfo::game_hint::HALO4;
                     //MessageBox(NULL, L"HALO4", L"", MB_OK);
 
                 } else if (game_id_sm.is(boost::sml::state<states::halo2a>)) {
                     temp += "Halo2A";
                     game = L"Halo2A";
-                    hint = mccinfo::file_readers::game_hint::HALO2A;
+                    hint = mccinfo::game_hint::HALO2A;
                     //MessageBox(NULL, L"HALO2A", L"", MB_OK);
                 }
 
@@ -537,25 +513,35 @@ template <class = class Dummy> class controller {
 
                 autosave_client_.set_on_complete([this, hint, game](const std::filesystem::path &src, const
                                                                   std::filesystem::path &path) {
-                    mccinfo::file_readers::game_hint hint_ = hint;
+                    mccinfo::game_hint hint_ = hint;
                     
                     MI_CORE_TRACE("autosave_client post_callback executed with\n\tsrc_: {0}\n\tdst_: {1}", 
-                        src.generic_string().c_str(), path.generic_string().c_str());
+                        src.generic_string().c_str(), 
+                        path.generic_string().c_str());
                     
                     if (std::filesystem::exists(path) && std::filesystem::is_directory(path)) {
                         for (const auto &entry : std::filesystem::directory_iterator(path)) {
                             const auto &path2 = entry.path();
                             MI_CORE_TRACE("Looking for theater file data: {0}",
-                                          path2.generic_string().c_str());
+                                          path2.generic_string().c_str()
+                            );
+
                             if (std::filesystem::is_regular_file(path2)) {
                                 if ((path2.extension().generic_string() == ".temp") ||
                                     (path2.extension().generic_string() == ".film")) {
-                                    MI_CORE_INFO("Setting Extended Match Info Theater File to: {0}", path2.generic_string().c_str());
+                                    MI_CORE_INFO("Setting Extended Match Info Theater File to: {0}", 
+                                        path2.generic_string().c_str()
+                                    );
+
                                     try {
-                                        this->emi_.theater_file_data_ = ReadTheaterFile(std::filesystem::canonical(path2), hint_);
+                                        this->emi_.theater_file_data_ = file_readers::ReadTheaterFile(std::filesystem::canonical(path2), hint_);
                                     }
                                     catch (std::exception& e) {
-                                        MI_CORE_ERROR("fsm controller failed to read theater file data from {0} with exception: {1}", std::filesystem::canonical(path2).generic_string().c_str(), e.what());
+                                        MI_CORE_ERROR("fsm controller failed to read theater file data from {0} with exception: {1}", 
+                                            std::filesystem::canonical(path2).generic_string().c_str(), 
+                                            e.what()
+                                        );
+
                                         this->emi_.theater_file_data_ = std::nullopt;
                                     }
                                 }
@@ -564,12 +550,52 @@ template <class = class Dummy> class controller {
                     }
                 });
 
+
+
+
+
+                //{
+                //    while (true) {
+                //        // acquire lock
+                //        // check op
+                //        // if stop, break
+                //        // else, request_copy(0)
+                //        // this_thread_sleep_for(1000)
+                //    }
+                //}
+
                 // 5 second delay should be sufficient for h2a/h4
-                if ((hint == mccinfo::file_readers::game_hint::HALO2A) ||
-                    (hint == mccinfo::file_readers::game_hint::HALO4)) {
-                    autosave_client_.request_copy(5000);
-                }
+                //if ((hint == mccinfo::file_readers::game_hint::HALO2A) ||
+                //    (hint == mccinfo::file_readers::game_hint::HALO4)) {
+                //    autosave_client_.request_copy(20000);
+                //} else {
+                //
+                //    autosave_client_.request_copy(1000);
+                //}
                 autosave_client_.request_copy(1000);
+
+                //autosave_thread_ = std::thread([&] {
+                //    while (true) {
+                //        std::unique_lock<std::mutex> lock(autosave_mut_);
+                //
+                //        MI_CORE_TRACE("autosave thread acquired lock");
+                //
+                //        if (stop_autosave_) {
+                //            stop_autosave_ = false;
+                //            break;
+                //        }
+                //
+                //        try {
+                //            MI_CORE_TRACE("autosave thread requesting copy");
+                //            autosave_client_.request_copy(5000);
+                //            MI_CORE_WARN("autosave_thread: copy request success");
+                //        }
+                //        catch (std::exception& e) {
+                //            MI_CORE_WARN("autosave_thread: failed to request copy: \n\tException: {0}", e.what());
+                //        }
+                //    }
+                //});
+
                 should_save_autosave = false;
             }
 
@@ -618,7 +644,7 @@ template <class = class Dummy> class controller {
                                  const krabs::trace_context &trace_context) {
 
         std::wostringstream woss;
-        print_trace_event(woss, record, trace_context);
+        utility::PrintTraceEvent(woss, record, trace_context);
 
         auto visit = [&](auto state) {
             states::BonusStateVisitor<_StateMachine> visitor(sm, record, trace_context, sc, woss);
@@ -682,6 +708,47 @@ template <class = class Dummy> class controller {
             msstore_install_ = msii.value();
         }
     }
+
+    void add_match_data_collector_callbacks() {
+        cb_table_.add_callback(LOADING_IN | ON_STATE_ENTRY, [&] {
+            std::thread cap_t([&] {
+                should_id_map = true;
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(4000));
+
+                HWND hwnd = query::LookForMCCWindowHandle().value();
+
+                RECT sr;
+                GetWindowRect(hwnd, &sr);
+
+                utility::ScreenCapture(sr, L".\\mccinfo_cache\\autosave\\loading_in.jpeg");
+            });
+
+            cap_t.detach();
+        });
+
+        cb_table_.add_callback(LOADING_OUT | ON_STATE_ENTRY, [&] {
+            std::thread cap_t([&] {
+                HWND hwnd = query::LookForMCCWindowHandle().value();
+
+                RECT sr;
+                GetWindowRect(hwnd, &sr);
+
+                utility::ScreenCapture(sr, L".\\mccinfo_cache\\autosave\\loading_out.jpeg");
+            });
+
+            cap_t.detach();
+        });
+        
+        //cb_table_.add_callback(LOADING_OUT | ON_STATE_ENTRY, [&] {
+        //    {
+        //        std::unique_lock<std::mutex> lock(autosave_mut_);
+        //        stop_autosave_ = true;
+        //    }
+        //    autosave_thread_.join();
+        //});
+    }
+
   private:
     utility::atomic_mutex lock;
 
@@ -690,6 +757,12 @@ template <class = class Dummy> class controller {
     boost::sml::sm<machines::mcc> mcc_sm;
     boost::sml::sm<machines::user> user_sm;
     boost::sml::sm<machines::game_id> game_id_sm;
+
+    callback_table& cb_table_;
+    std::thread autosave_thread_;
+    std::mutex autosave_mut_;
+    bool stop_autosave_ = false;
+
     mccinfo::file_readers::theater_file_data file_data;
     mccinfo::fsm::autosave_client autosave_client_;
 
@@ -705,6 +778,7 @@ template <class = class Dummy> class controller {
     bool should_id_map = false;
     bool should_save_autosave = false;
     bool should_id_cr = false;
+    bool should_copy_cr = false;
 
   private: // filtering
     bool log_full = false;

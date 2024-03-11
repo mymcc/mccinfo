@@ -405,5 +405,63 @@ inline std::optional<HWND> LookForMCCWindowHandle(void) {
     else
         return std::nullopt;
 }
+
+inline std::optional<game_hint> IdentifyCurrentGame(
+    const std::filesystem::path &install_root_path) {
+    std::wstring prefix(install_root_path.generic_wstring() + L"\\");
+
+    std::wstring temp_prefix(query::LookForMCCTempPath().value() + L"\\Config\\");
+    // halo1
+    {
+        std::wstring path = prefix + L"halo1\\sound\\pc\\sounds_stream.fsb";
+        if (utility::FileHasOpenHandle(path)) {
+            return game_hint::HALO1;
+        }
+    }
+
+    // halo 2
+    {
+        // need to discern between h2 and h2a
+        std::wstring pref_path = temp_prefix + L"Halo2\\preferences.dat";
+
+        // halo2 classic mp/or h2/h2a campaign
+        if (utility::FileHasOpenHandle(pref_path)) {
+            return game_hint::HALO2;
+        }
+
+        // h2a mp
+        std::wstring map_path = prefix + L"groundhog\\maps\\shared.map";
+        if (utility::FileHasOpenHandle(map_path)) {
+            return game_hint::HALO2A;
+        }
+    }
+
+    // halo 3
+    {
+        std::wstring path = prefix + L"halo3\\maps\\shared.map";
+        if (utility::FileHasOpenHandle(path)) {
+            return game_hint::HALO3;
+        }
+    }
+
+    // halo 4
+    {
+        std::wstring path = prefix + L"halo4\\maps\\shared.map";
+        if (utility::FileHasOpenHandle(path)) {
+            return game_hint::HALO4;
+        }
+    }
+
+    // halo reach
+    {
+        std::wstring path = prefix + L"haloreach\\maps\\shared.map";
+        if (utility::FileHasOpenHandle(path)) {
+            return game_hint::HALOREACH;
+        }
+    }
+
+    return std::nullopt;
+}
+
 } // namespace query
 } // namespace mccinfo

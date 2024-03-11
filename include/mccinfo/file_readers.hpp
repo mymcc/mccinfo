@@ -35,15 +35,7 @@ inline unsigned int GetSystemAccountedLeapSeconds(void) {
     return 0;
 }
 
-enum class game_hint{
-    HALO1,
-    HALO2,
-    HALO2A,
-    HALO3,
-    HALO3ODST,
-    HALO4,
-    HALOREACH
-};
+
 
 using player_info = std::pair<int, std::string>;
 
@@ -950,10 +942,18 @@ class halo2a_theater_file_reader : public theater_file_reader {
         ifs.seekg(0);
         ifs.seekg(gametype_offset);
 
+        if (!ifs) {
+            return std::nullopt;
+        }
+
         std::vector<char> buffer;
         buffer.resize(256);
 
         ifs.read(&buffer.data()[0], 256);
+
+        if (ifs.fail()) {
+            return std::nullopt;
+        }
 
         std::wstring wstr(reinterpret_cast<const wchar_t *>(buffer.data()));
 
@@ -971,11 +971,19 @@ class halo2a_theater_file_reader : public theater_file_reader {
         ifs.seekg(0);
         ifs.seekg(desc_offset);
 
+        if (!ifs) {
+            return std::nullopt;
+        }
+
         unsigned long long desc_length = 256;
         std::vector<char> buffer;
         buffer.resize(desc_length);
 
         ifs.read(&buffer.data()[0], desc_length);
+
+        if (ifs.fail()) {
+            return std::nullopt;
+        }
 
         std::wstring wstr(reinterpret_cast<const wchar_t *>(buffer.data()), buffer.size());
 
@@ -992,12 +1000,20 @@ class halo2a_theater_file_reader : public theater_file_reader {
 
         ifs.seekg(0);
         ifs.seekg(xuid_offset);
+
+        if (!ifs) {
+            return std::nullopt;
+        }
+
         std::vector<char> buffer;
         buffer.resize(8);
 
         size_t i = 0;
         for (auto &b : buffer) {
             ifs.read(&buffer.data()[i], 1);
+            if (ifs.fail()) {
+                return std::nullopt;
+            }
             ++i;
         }
 
@@ -1020,10 +1036,22 @@ class halo2a_theater_file_reader : public theater_file_reader {
 
         ifs.seekg(0);
         ifs.seekg(author_offset);
+        if (!ifs) {
+            return std::nullopt;
+        }
+
         std::vector<char> buffer;
         buffer.resize(16);
 
+        if (!ifs) {
+            return std::nullopt;
+        }
+
         ifs.read(&buffer.data()[0], 16);
+
+        if (ifs.fail()) {
+            return std::nullopt;
+        }
 
         std::string str(buffer.data());
         return str;
@@ -1036,11 +1064,21 @@ class halo2a_theater_file_reader : public theater_file_reader {
 
         ifs.seekg(0);
         ifs.seekg(duration_offset);
+        if (!ifs) {
+            return std::nullopt;
+        }
+
 
         char buffer[3];
         buffer[2] = '\0';
         ifs.read(&buffer[0], 1);
+        if (ifs.fail()) {
+            return std::nullopt;
+        }
         ifs.read(&buffer[1], 1);
+        if (ifs.fail()) {
+            return std::nullopt;
+        }
         char t = buffer[0];
         buffer[0] = buffer[1];
         buffer[1] = t;
@@ -1065,8 +1103,16 @@ class halo2a_theater_file_reader : public theater_file_reader {
         auto match_length = std::chrono::seconds(strtoul(ret.str().c_str(), NULL, 16));
 
         ifs.seekg(timestamp_offset);
+        if (!ifs) {
+            return std::nullopt;
+        }
+
         char buffer2[128];
         ifs.read(buffer2, 128);
+
+        if (ifs.fail()) {
+            return std::nullopt;
+        }
         // ifs.close();
 
         std::tm tm = {};
@@ -1102,7 +1148,9 @@ class halo2a_theater_file_reader : public theater_file_reader {
 
         ifs.seekg(0);
         ifs.seekg(head_offset);
-
+        if (!ifs) {
+            return std::nullopt;
+        }
         std::set<player_info> player_set;
 
         int empty_region_count = 0;
@@ -1110,6 +1158,11 @@ class halo2a_theater_file_reader : public theater_file_reader {
             bool current_is_empty_region = true;
             char buf[1];
             ifs.read(&buf[0], 1);
+
+            if (ifs.fail()) {
+                return std::nullopt;
+            }
+
             if (buf[0] == '\0') {
                 ++empty_region_count;
                 if (empty_region_count >= 2) {
@@ -1122,13 +1175,19 @@ class halo2a_theater_file_reader : public theater_file_reader {
 
             // reset
             ifs.seekg(-1, std::ios_base::cur);
-
+            if (!ifs) {
+                return std::nullopt;
+            }
             if (!current_is_empty_region) {
                 // read player name
                 std::vector<char> buffer;
                 buffer.resize(32);
 
                 ifs.read(&buffer.data()[0], 32);
+
+                if (ifs.fail()) {
+                    return std::nullopt;
+                }
 
                 std::wstring wstr(reinterpret_cast<const wchar_t *>(buffer.data()));
 
@@ -1140,18 +1199,31 @@ class halo2a_theater_file_reader : public theater_file_reader {
                 char team_buf[1];
                 // go to team
                 ifs.seekg(328 - 72, std::ios_base::cur);
+                if (!ifs) {
+                    return std::nullopt;
+                }
                 ifs.read(&team_buf[0], 1);
-
+                if (ifs.fail()) {
+                    return std::nullopt;
+                }
                 if (success) {
                     player_set.insert({team_buf[0], bytes.value()});
                 }
 
                 ifs.seekg(-1, std::ios_base::cur);
+                if (!ifs) {
+                    return std::nullopt;
+                }
                 ifs.seekg(40, std::ios_base::cur);
-
+                if (!ifs) {
+                    return std::nullopt;
+                }
 
             } else {
                 ifs.seekg(328, std::ios_base::cur);
+                if (!ifs) {
+                    return std::nullopt;
+                }
             }
 
             // skip to next player
@@ -1160,6 +1232,59 @@ class halo2a_theater_file_reader : public theater_file_reader {
         return player_set;
     }
 };
+
+inline theater_file_data ReadTheaterFile(
+    const std::filesystem::path &theater_file, mccinfo::game_hint hint) {
+    // theater_file_timestamp.str("");
+    theater_file_data file_data;
+
+    if (std::filesystem::file_size(theater_file) > 0) {
+        switch (hint) {
+        case mccinfo::game_hint::HALO2A: {
+            mccinfo::file_readers::halo2a_theater_file_reader reader;
+            auto file_data_query = reader.Read(theater_file);
+            if (file_data_query.has_value()) {
+                file_data = file_data_query.value();
+                // theater_file_timestamp << file_data.utc_timestamp_;
+            }
+            break;
+        }
+        case mccinfo::game_hint::HALO3: {
+            mccinfo::file_readers::halo3_theater_file_reader reader;
+            auto file_data_query = reader.Read(theater_file);
+            if (file_data_query.has_value()) {
+                file_data = file_data_query.value();
+                // theater_file_timestamp << file_data.utc_timestamp_;
+            }
+            break;
+        }
+        case mccinfo::game_hint::HALOREACH: {
+            mccinfo::file_readers::haloreach_theater_file_reader reader;
+            auto file_data_query = reader.Read(theater_file);
+            if (file_data_query.has_value()) {
+                file_data = file_data_query.value();
+                // theater_file_timestamp << file_data.utc_timestamp_;
+            }
+            break;
+        }
+        case mccinfo::game_hint::HALO4: {
+            mccinfo::file_readers::halo4_theater_file_reader reader;
+            auto file_data_query = reader.Read(theater_file);
+            if (file_data_query.has_value()) {
+                file_data = file_data_query.value();
+                // theater_file_timestamp << file_data.utc_timestamp_;
+            }
+            break;
+        }
+        default:
+            break;
+        }
+    } else {
+        MI_CORE_WARN("ReadTheaterFile() called with an empty theater file: {0}",
+                     theater_file.generic_string().c_str());
+    }
+    return file_data;
+}
 
 }
 }

@@ -31,6 +31,9 @@
 #include <type_traits>
 #include <memory>
 #include <stdexcept>
+#include <ctime>
+#include <iostream>
+#include <ostream>
 
 namespace mccinfo {
 namespace utility {
@@ -194,6 +197,24 @@ inline std::optional<std::filesystem::path> ExpandPath(const std::filesystem::pa
     if (!std::filesystem::exists(dst))
         return std::nullopt;
     return std::filesystem::absolute(dst);
+}
+
+inline bool FileHasOpenHandle(const std::filesystem::path& file_path) {
+    HANDLE hFile = CreateFileW(file_path.generic_wstring().c_str(), // name of the write
+                               GENERIC_WRITE,         // open for writing
+                               0,                     // *** do not share ***
+                               NULL,                  // default security
+                               OPEN_EXISTING,         // create new file only
+                               FILE_ATTRIBUTE_NORMAL, // normal file
+                               NULL);                 // no attr. template
+
+    if ((hFile == INVALID_HANDLE_VALUE) && (GetLastError() == ERROR_SHARING_VIOLATION)) {
+        CloseHandle(hFile);
+        return true;
+    } else {
+        CloseHandle(hFile);
+        return false;
+    }
 }
 
 std::optional<DWORD> GetProcessIDFromName(const std::wstring &process_name) {
@@ -409,6 +430,87 @@ inline void ScreenCapture(RECT sr, const std::filesystem::path &save_to) {
 
     Gdiplus::GdiplusShutdown(gdiplusToken);
 }
+
+inline std::string CurrentTimestampISO() {   
+    time_t now;
+    time(&now);
+
+    char buf[sizeof "2011-10-08T07:07:09Z"];
+    strftime(buf, sizeof buf, "%FT%TZ", gmtime(&now));
+    
+    std::string out_str(&buf[0], (sizeof buf) - 1);
+    return out_str; 
+}
+
+inline bool PathContains(const std::filesystem::path& path, const std::string& str) {
+    return path.generic_string().find(str) != std::string::npos;
+}
+
+inline bool PathContainsW(const std::filesystem::path &path, const std::wstring &str) {
+    return path.generic_wstring().find(str) != std::wstring::npos;
+}
+
+inline bool by_last_file_write_time(const std::filesystem::path &left,
+                                    const std::filesystem::path &right) {
+    return std::filesystem::last_write_time(left) < std::filesystem::last_write_time(right);
+}
+
+inline void PrintTraceEvent(std::wostringstream &woss, const EVENT_RECORD &record,
+                            const krabs::trace_context &trace_context) {
+    woss << L"\t";
+    krabs::schema schema(record, trace_context.schema_locator);
+    krabs::parser parser(schema);
+
+    try {
+        if (schema.event_opcode() != 11) { // Prevent Process_Terminate (Event Version(2))
+            if (schema.event_opcode() != 64) {
+                if (schema.event_opcode() != 67) {
+                    if ((schema.event_opcode() == 3) &&
+                        ((std::wstring(schema.task_name()).find(L"Process") ==
+                          std::wstring::npos))) {
+
+                        std::wstring imagefilename = parser.parse<std::wstring>(L"FileName");
+                        std::uint32_t pid = parser.parse<std::uint32_t>(L"ProcessId");
+
+                        woss << schema.task_name() << L"_" << schema.opcode_name();
+                        woss << L" (" << schema.event_opcode() << L") ";
+                        woss << L" ProcessId=" << pid;
+                        woss << L" ImageFileName=" << imagefilename;
+
+                    } else {
+                        std::string imagefilename = parser.parse<std::string>(L"ImageFileName");
+                        std::uint32_t pid = parser.parse<std::uint32_t>(L"ProcessId");
+                        woss << schema.task_name() << L"_" << schema.opcode_name();
+                        woss << L" (" << schema.event_opcode() << L") ";
+                        woss << L" ProcessId=" << pid;
+                        auto ws = utility::ConvertBytesToWString(imagefilename);
+                        if (ws.has_value())
+                            woss << L" ImageFileName=" << ws.value();
+                    }
+                } else {
+                    uint32_t ttid = parser.parse<uint32_t>(L"TTID");
+                    uint32_t io_size = parser.parse<uint32_t>(L"IoSize");
+
+                    woss << schema.task_name() << L"_" << schema.opcode_name();
+                    woss << L" (" << schema.event_opcode() << L") ";
+                    woss << L" pid=" << std::to_wstring(record.EventHeader.ProcessId);
+                    woss << L" ttid=" << std::to_wstring(ttid);
+                    woss << L" IoSize=" << std::to_wstring(io_size);
+                }
+            } else {
+                std::wstring imagefilename = parser.parse<std::wstring>(L"OpenPath");
+                woss << schema.task_name() << L"_" << schema.opcode_name();
+                woss << L" (" << schema.event_opcode() << L") ";
+                woss << " Path=" << imagefilename;
+            }
+            woss << std::endl;
+        }
+    } catch (const std::exception &exc) {
+        std::cerr << exc.what();
+        throw std::runtime_error("hi :)))))))))))");
+    }
+}
+
 
 } // namespace utility
 } // namespace mccinfo
