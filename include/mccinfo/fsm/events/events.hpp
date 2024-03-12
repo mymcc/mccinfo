@@ -36,7 +36,7 @@ namespace events {
 		events::match_paused>;
 
 
-inline event_t GetGameFromPath(const std::filesystem::path &path) {
+inline event_t GetGameEventFromPath(const std::filesystem::path &path) {
     if      (utility::PathContains(path, "Halo1"))      return events::haloce_found{};
     else if (utility::PathContains(path, "Halo2A"))     return events::halo2a_found{};
     else if (utility::PathContains(path, "Halo2"))      return events::halo2_found{};
@@ -44,7 +44,7 @@ inline event_t GetGameFromPath(const std::filesystem::path &path) {
     else if (utility::PathContains(path, "Halo3"))      return events::halo3_found{};
     else if (utility::PathContains(path, "Halo4"))      return events::halo4_found{};
     else if (utility::PathContains(path, "HaloReach"))  return events::haloreach_found{};
-    else throw std::runtime_error("GetGameFromPath(): game not found");
+    else throw std::runtime_error("GetGameEventFromPath(): game not found");
 }
 
 inline event_t GetGameEventFromHint(const game_hint& hint) {

@@ -87,51 +87,28 @@ class event_provider {
 
         static krabs::event_filter process_filter = predicates::filters::make_process_filter();
         static krabs::event_filter fiio_filter = predicates::filters::make_fiio_filter();
-        static krabs::event_filter il_filter = predicates::filters::make_dummy_image_filter();
 
         static auto dispatch_event = 
             [=] (const EVENT_RECORD &record, const krabs::trace_context &trace_context) {
                 try {
                     sm->handle_trace_event(record, trace_context);
                 }
-                catch (std::exception& e) {
+                catch (const std::exception& e) {
                     std::cerr << e.what() << std::endl;
                 }
             };
 
-        static auto dispatch_image_event =
-            [=](const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
-                try {
-                    if (details::concrete_image_filter(record, trace_context)) {
-                        sm->handle_trace_event(record, trace_context);
-                    }
-                }
-                catch (std::exception& e) {
-                        std::cerr << e.what() << std::endl;
-                }
-            };
-
-        il_provider_.add_on_event_callback(dispatch_image_event);
-
-        static auto dummy = 
-            [](const EVENT_RECORD &record, const krabs::trace_context &trace_context) {
-                int x;
-                (void*)x;
-            };
-
         process_filter.add_on_event_callback(dispatch_event);
         fiio_filter.add_on_event_callback(dispatch_event);
-        il_filter.add_on_event_callback(dummy);
 
         process_provider_.add_filter(process_filter);
         fiio_provider_.add_filter(fiio_filter);
-        il_provider_.add_filter(il_filter);
 
         MI_CORE_TRACE("Enabling kernel event providers ...");
 
         trace_.enable(process_provider_);
         trace_.enable(fiio_provider_);
-        //trace_.enable(il_provider_);
+
         MI_CORE_TRACE("Kernel event providers enabled");
 
         MI_CORE_TRACE("Kernel event dispatch enabled");
@@ -155,7 +132,6 @@ class event_provider {
     krabs::kernel_trace trace_;
     krabs::kernel::process_provider process_provider_;
     krabs::kernel::file_init_io_provider fiio_provider_;
-    krabs::kernel::image_load_provider il_provider_;
 };
 
 } // namespace fsm

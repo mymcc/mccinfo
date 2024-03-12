@@ -346,7 +346,7 @@ inline std::vector<std::wstring> GetLoadedModulesFromProcessID(DWORD processID) 
 
     hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processID);
 
-    if (hProcess ==  NULL);
+    if (hProcess ==  NULL)
         return {};
 
     std::vector<std::wstring> modules;
@@ -431,15 +431,18 @@ inline void ScreenCapture(RECT sr, const std::filesystem::path &save_to) {
     Gdiplus::GdiplusShutdown(gdiplusToken);
 }
 
-inline std::string CurrentTimestampISO() {   
+inline std::string CurrentTimestampISO() {
     time_t now;
     time(&now);
 
+    struct tm tm_buf;
+    gmtime_s(&tm_buf, &now);
+
     char buf[sizeof "2011-10-08T07:07:09Z"];
-    strftime(buf, sizeof buf, "%FT%TZ", gmtime(&now));
-    
-    std::string out_str(&buf[0], (sizeof buf) - 1);
-    return out_str; 
+    strftime(buf, sizeof buf, "%FT%TZ", &tm_buf);
+
+    std::string out_str(buf, sizeof buf - 1);
+    return out_str;
 }
 
 inline bool PathContains(const std::filesystem::path& path, const std::string& str) {

@@ -1,10 +1,6 @@
 #pragma once
 
-#include <boost/sml.hpp>
-
-#include "mccinfo/query.hpp"
 #include "mccinfo/fsm/states/game_id_states.hpp"
-#include "mccinfo/fsm/callback_table.hpp"
 
 namespace mccinfo {
 namespace fsm {
@@ -31,86 +27,29 @@ struct game_id {
         boost::sml::state<halo2> + event<game_exit> = boost::sml::state<none>,
         boost::sml::state<halo2> + event<mcc_terminate> = boost::sml::state<none>,
 
-        boost::sml::state<halo2a> + event<game_exit> = boost::sml::state<none>,
-        boost::sml::state<halo2a> + event<mcc_terminate> = boost::sml::state<none>,
-
         boost::sml::state<halo3> + event<game_exit> = boost::sml::state<none>,
         boost::sml::state<halo3> + event<mcc_terminate> = boost::sml::state<none>,
 
         boost::sml::state<halo3odst> + event<game_exit> = boost::sml::state<none>,
         boost::sml::state<halo3odst> + event<mcc_terminate> = boost::sml::state<none>,
 
-        boost::sml::state<halo4> + event<game_exit> = boost::sml::state<none>,
-        boost::sml::state<halo4> + event<mcc_terminate> = boost::sml::state<none>,
-
         boost::sml::state<haloreach> + event<game_exit> = boost::sml::state<none>,
         boost::sml::state<haloreach> + event<mcc_terminate> = boost::sml::state<none>,
 
+        boost::sml::state<halo4> + event<game_exit> = boost::sml::state<none>,
+        boost::sml::state<halo4> + event<mcc_terminate> = boost::sml::state<none>,
 
-        boost::sml::state<none> + boost::sml::on_entry<_> /
-                                     [](callback_table& cbtable) {
-                                         cbtable.execute_callbacks(ON_STATE_ENTRY | NONE);
-                                     },
-        boost::sml::state<haloce> + boost::sml::on_entry<_> /
-                                     [](callback_table& cbtable) {
-                                         cbtable.execute_callbacks(ON_STATE_ENTRY | HALOCE);
-                                     },
-        boost::sml::state<halo2> + boost::sml::on_entry<_> /
-                                     [](callback_table& cbtable) {
-                                         cbtable.execute_callbacks(ON_STATE_ENTRY | HALO2);
-                                     },
-        boost::sml::state<halo2a> + boost::sml::on_entry<_> /
-                                     [](callback_table& cbtable) {
-                                         cbtable.execute_callbacks(ON_STATE_ENTRY | HALO2A);
-                                     },
-        boost::sml::state<halo3> + boost::sml::on_entry<_> /
-                                     [](callback_table& cbtable) {
-                                         cbtable.execute_callbacks(ON_STATE_ENTRY | HALO3);
-                                     },
-        boost::sml::state<halo3odst> + boost::sml::on_entry<_> /
-                                     [](callback_table& cbtable) {
-                                         cbtable.execute_callbacks(ON_STATE_ENTRY | HALO3ODST);
-                                     },
-        boost::sml::state<halo4> + boost::sml::on_entry<_> /
-                                     [](callback_table& cbtable) {
-                                         cbtable.execute_callbacks(ON_STATE_ENTRY | HALO4);
-                                     },
-        boost::sml::state<haloreach> + boost::sml::on_entry<_> /
-                                     [](callback_table& cbtable) {
-                                         cbtable.execute_callbacks(ON_STATE_ENTRY | HALOREACH);
-                                     },
-        boost::sml::state<none> + boost::sml::on_exit<_> /
-                                     [](callback_table& cbtable) {
-                                         cbtable.execute_callbacks(ON_STATE_EXIT | NONE);
-                                     },
-        boost::sml::state<haloce> + boost::sml::on_exit<_> /
-                                        [](callback_table &cbtable) {
-                                            cbtable.execute_callbacks(ON_STATE_EXIT | HALOCE);
-                                     },
-        boost::sml::state<halo2> + boost::sml::on_exit<_> /
-                                       [](callback_table &cbtable) {
-                                           cbtable.execute_callbacks(ON_STATE_EXIT | HALO2);
-                                     },
-        boost::sml::state<halo2a> + boost::sml::on_exit<_> /
-                                     [](callback_table& cbtable) {
-                                         cbtable.execute_callbacks(ON_STATE_EXIT | HALO2A);
-                                     },
-        boost::sml::state<halo3> + boost::sml::on_exit<_> /
-                                     [](callback_table& cbtable) {
-                                         cbtable.execute_callbacks(ON_STATE_EXIT | HALO3);
-                                     },
-        boost::sml::state<halo3odst> + boost::sml::on_exit<_> /
-                                     [](callback_table& cbtable) {
-                                         cbtable.execute_callbacks(ON_STATE_EXIT | HALO3ODST);
-                                     },
-        boost::sml::state<halo4> + boost::sml::on_exit<_> /
-                                     [](callback_table& cbtable) {
-                                         cbtable.execute_callbacks(ON_STATE_EXIT | HALO4);
-                                     },
-        boost::sml::state<haloreach> + boost::sml::on_exit<_> /
-                                     [](callback_table& cbtable) {
-                                         cbtable.execute_callbacks(ON_STATE_EXIT | HALOREACH);
-                                     }
+        boost::sml::state<halo2a> + event<game_exit> = boost::sml::state<none>,
+        boost::sml::state<halo2a> + event<mcc_terminate> = boost::sml::state<none>,
+
+        CALLBACK_ON_TRANSITION(boost::sml::state<none>, NONE),
+        CALLBACK_ON_TRANSITION(boost::sml::state<haloce>, HALOCE),
+        CALLBACK_ON_TRANSITION(boost::sml::state<halo2>, HALO2),
+        CALLBACK_ON_TRANSITION(boost::sml::state<halo3>, HALO3),
+        CALLBACK_ON_TRANSITION(boost::sml::state<halo3odst>, HALO3ODST),
+        CALLBACK_ON_TRANSITION(boost::sml::state<haloreach>, HALOREACH),
+        CALLBACK_ON_TRANSITION(boost::sml::state<halo4>, HALO4),
+        CALLBACK_ON_TRANSITION(boost::sml::state<halo2a>, HALO2A)
     );
 }
 };

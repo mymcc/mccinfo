@@ -7,17 +7,10 @@
     static constexpr auto
 
 #include "mccinfo/fsm/autosave_client.hpp"
-#include "mccinfo/fsm/machines/mcc.hpp"
-#include "mccinfo/fsm/machines/user.hpp"
-#include "mccinfo/fsm/machines/game_id.hpp"
-
-#include "edges/edges.hpp"
-#include <string>
+#include "mccinfo/fsm/machines/machines.hpp"
 
 namespace mccinfo {
 namespace fsm {
-
-
 namespace details {
 
 inline void collect_leftover_autosave_files(const std::filesystem::path& root,
