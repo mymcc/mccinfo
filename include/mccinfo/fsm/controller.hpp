@@ -431,69 +431,16 @@ template <class = class Dummy> class controller {
             }
 
             if (should_save_autosave) {
-                std::string temp = "C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\";
-                std::wstring game = L"";
-                mccinfo::game_hint hint = mccinfo::game_hint::HALO3;
+                auto target_data = get_autosave_client_target_data();
+                emi_.game_hint_ = target_data.second;
 
-                assert(!game_id_sm.is(boost::sml::state<states::none>));
-
-                if (game_id_sm.is(boost::sml::state<states::haloce>)) {
-                    temp += "Halo1";
-                    game = L"Halo1";
-                    hint = mccinfo::game_hint::HALO1;
-                    //MessageBox(NULL, L"HALO1", L"", MB_OK);
-
-                } else if (game_id_sm.is(boost::sml::state<states::halo2>)) {
-                    temp += "Halo2";
-                    game = L"Halo2";
-
-                    hint = mccinfo::game_hint::HALO2;
-                    //MessageBox(NULL, L"HALO2", L"", MB_OK);
-
-
-                } else if (game_id_sm.is(boost::sml::state<states::halo3>)) {
-                    temp += "Halo3";
-                    game = L"Halo3";
-
-                    hint = mccinfo::game_hint::HALO3;
-                    //MessageBox(NULL, L"HALO3", L"", MB_OK);
-
-                } else if (game_id_sm.is(boost::sml::state<states::halo3odst>)) {
-                    temp += "Halo3ODST";
-                    game = L"Halo3ODST";
-
-                    hint = mccinfo::game_hint::HALO3;
-                    //MessageBox(NULL, L"HALO3ODST", L"", MB_OK);
-
-                } else if (game_id_sm.is(boost::sml::state<states::haloreach>)) {
-                    temp += "HaloReach";
-                    game = L"HaloReach";
-
-                    hint = mccinfo::game_hint::HALOREACH;
-                    //MessageBox(NULL, L"HALOREACH", L"", MB_OK);
-
-                } else if (game_id_sm.is(boost::sml::state<states::halo4>)) {
-                    temp += "Halo4";
-                    game = L"Halo4";
-                    hint = mccinfo::game_hint::HALO4;
-                    //MessageBox(NULL, L"HALO4", L"", MB_OK);
-
-                } else if (game_id_sm.is(boost::sml::state<states::halo2a>)) {
-                    temp += "Halo2A";
-                    game = L"Halo2A";
-                    hint = mccinfo::game_hint::HALO2A;
-                    //MessageBox(NULL, L"HALO2A", L"", MB_OK);
-                }
-
-                temp += "\\autosave";
-                emi_.game_hint_ = hint;
-
-                autosave_client_.set_copy_src(temp);
+                autosave_client_.set_copy_src(target_data.first);
                 autosave_client_.set_flatten_on_write(true);
 
-                autosave_client_.set_on_complete([this, hint, game](const std::filesystem::path &src, const
+                autosave_client_.set_on_complete([this, target_data](const std::filesystem::path &src, const
                                                                   std::filesystem::path &path) {
-                    mccinfo::game_hint hint_ = hint;
+
+                    mccinfo::game_hint hint_ = target_data.second;
                     
                     MI_CORE_TRACE("autosave_client post_callback executed with\n\tsrc_: {0}\n\tdst_: {1}", 
                         src.generic_string().c_str(), 
@@ -578,16 +525,7 @@ template <class = class Dummy> class controller {
             // catch the carnagereport
             if (user_sm.is(boost::sml::state<states::in_game>) && should_id_cr) {
                 if (predicates::events::temp_carnage_report_created(record, trace_context)) {
-                    krabs::schema schema(record, trace_context.schema_locator);
-                    krabs::parser parser(schema);
-                    std::wstring filename = parser.parse<std::wstring>(L"OpenPath");
-                    auto bytes = utility::ConvertWStringToBytes(filename);
-                    if (bytes.has_value()) {
-                        mi.map = bytes.value();
-                        emi_.carnage_report_ = bytes.value();
-                        emi_.carnage_report_.value().replace_extension();
-                        should_id_cr = false;
-                    }
+                    id_carnage_report(record, trace_context);
                 }
             }
 
@@ -728,6 +666,61 @@ template <class = class Dummy> class controller {
         //});
     }
 
+    void id_carnage_report(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+        krabs::schema schema(record, trace_context.schema_locator);
+        krabs::parser parser(schema);
+        std::wstring filename = parser.parse<std::wstring>(L"OpenPath");
+        auto bytes = utility::ConvertWStringToBytes(filename);
+        if (bytes.has_value()) {
+            mi.map = bytes.value();
+            emi_.carnage_report_ = bytes.value();
+            emi_.carnage_report_.value().replace_extension();
+            should_id_cr = false;
+        }
+    }
+
+    std::pair<std::filesystem::path, game_hint> get_autosave_client_target_data() const {
+        std::filesystem::path autosave_root = query::LookForMCCTempPath().value();
+        autosave_root /= "Temporary";
+
+        mccinfo::game_hint hint;
+
+        assert(!game_id_sm.is(boost::sml::state<states::none>));
+
+        if (game_id_sm.is(boost::sml::state<states::haloce>)) {
+            autosave_root /= "Halo1";
+            hint = mccinfo::game_hint::HALO1;
+        }
+        else if (game_id_sm.is(boost::sml::state<states::halo2>)) {
+            autosave_root /= "Halo2";
+            hint = mccinfo::game_hint::HALO2;
+        }
+        else if (game_id_sm.is(boost::sml::state<states::halo3>)) {
+            autosave_root /= "Halo3";
+            hint = mccinfo::game_hint::HALO3;
+        }
+        else if (game_id_sm.is(boost::sml::state<states::halo3odst>)) {
+            autosave_root /= "Halo3ODST";
+            hint = mccinfo::game_hint::HALO3;
+        }
+        else if (game_id_sm.is(boost::sml::state<states::haloreach>)) {
+            autosave_root /= "HaloReach";
+            hint = mccinfo::game_hint::HALOREACH;
+        }
+        else if (game_id_sm.is(boost::sml::state<states::halo4>)) {
+            autosave_root /= "Halo4";
+            hint = mccinfo::game_hint::HALO4;
+        }
+        else if (game_id_sm.is(boost::sml::state<states::halo2a>)) {
+            autosave_root /= "Halo2A";
+            hint = mccinfo::game_hint::HALO2A;
+        }
+
+        autosave_root /= "autosave";
+
+        return { autosave_root, hint };
+    }
+
   private:
     utility::atomic_mutex lock;
 
@@ -742,8 +735,8 @@ template <class = class Dummy> class controller {
     std::mutex autosave_mut_;
     bool stop_autosave_ = false;
 
-    mccinfo::file_readers::theater_file_data file_data;
-    mccinfo::fsm::autosave_client autosave_client_;
+    autosave_client autosave_client_;
+    file_readers::theater_file_data file_data;
 
     extended_match_info emi_;
 
