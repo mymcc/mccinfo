@@ -437,12 +437,6 @@ template <class = class Dummy> class controller {
                 }
             }
 
-            if (user_sm.is(boost::sml::state<states::in_game>) && before_was_not_in_game) {
-                should_save_autosave = true;
-                should_id_cr = true;
-                should_copy_cr = true;
-            }
-
             if (should_save_autosave) {
                 std::string temp = "C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\";
                 std::wstring game = L"";
@@ -543,10 +537,6 @@ template <class = class Dummy> class controller {
                     }
                 });
 
-
-
-
-
                 //{
                 //    while (true) {
                 //        // acquire lock
@@ -607,8 +597,6 @@ template <class = class Dummy> class controller {
                     }
                 }
             }
-
-
 
         }
     }
@@ -730,6 +718,12 @@ template <class = class Dummy> class controller {
             });
 
             cap_t.detach();
+        });
+
+        cb_table_.add_callback(IN_GAME | ON_STATE_ENTRY, [&] {
+            should_save_autosave = true;
+            should_id_cr = true;
+            should_copy_cr = true;
         });
         
         //cb_table_.add_callback(LOADING_OUT | ON_STATE_ENTRY, [&] {

@@ -45,33 +45,60 @@ struct user {
 
         boost::sml::state<offline> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         cbtable.execute_callback(ON_STATE_ENTRY | OFFLINE);
+                                         cbtable.execute_callbacks(ON_STATE_ENTRY | OFFLINE);
                                      },
         boost::sml::state<waiting_on_launch> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         cbtable.execute_callback(ON_STATE_ENTRY | WAITING_ON_LAUNCH);
+                                         cbtable.execute_callbacks(ON_STATE_ENTRY | WAITING_ON_LAUNCH);
                                      },
         boost::sml::state<identifying_session> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         cbtable.execute_callback(ON_STATE_ENTRY | IDENTIFYING_SESSION);
+                                         cbtable.execute_callbacks(ON_STATE_ENTRY | IDENTIFYING_SESSION);
                                      },
         boost::sml::state<in_menus> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         cbtable.execute_callback(ON_STATE_ENTRY | IN_MENUS);
+                                         cbtable.execute_callbacks(ON_STATE_ENTRY | IN_MENUS);
                                      },
         boost::sml::state<loading_in> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         cbtable.execute_callback(ON_STATE_ENTRY | LOADING_IN);
+                                         cbtable.execute_callbacks(ON_STATE_ENTRY | LOADING_IN);
                                      },
         boost::sml::state<in_game> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         cbtable.execute_callback(ON_STATE_ENTRY | IN_GAME);
+                                         cbtable.execute_callbacks(ON_STATE_ENTRY | IN_GAME);
                                      },
         boost::sml::state<loading_out> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         cbtable.execute_callback(ON_STATE_ENTRY | LOADING_OUT);
+                                         cbtable.execute_callbacks(ON_STATE_ENTRY | LOADING_OUT);
+                                     },
+        boost::sml::state<offline> + boost::sml::on_exit<_> /
+                                     [](callback_table& cbtable) {
+                                         cbtable.execute_callbacks(ON_STATE_EXIT | OFFLINE);
+                                     },
+        boost::sml::state<waiting_on_launch> + boost::sml::on_exit<_> /
+                                     [](callback_table& cbtable) {
+                                         cbtable.execute_callbacks(ON_STATE_EXIT | WAITING_ON_LAUNCH);
+                                     },
+        boost::sml::state<identifying_session> + boost::sml::on_exit<_> /
+                                     [](callback_table& cbtable) {
+                                         cbtable.execute_callbacks(ON_STATE_EXIT | IDENTIFYING_SESSION);
+                                     },
+        boost::sml::state<in_menus> + boost::sml::on_exit<_> /
+                                     [](callback_table& cbtable) {
+                                         cbtable.execute_callbacks(ON_STATE_EXIT | IN_MENUS);
+                                     },
+        boost::sml::state<loading_in> + boost::sml::on_entry<_> /
+                                     [](callback_table& cbtable) {
+                                         cbtable.execute_callbacks(ON_STATE_EXIT | LOADING_IN);
+                                     },
+        boost::sml::state<in_game> + boost::sml::on_exit<_> /
+                                     [](callback_table& cbtable) {
+                                         cbtable.execute_callbacks(ON_STATE_EXIT | IN_GAME);
+                                     },
+        boost::sml::state<loading_out> + boost::sml::on_exit<_> /
+                                     [](callback_table& cbtable) {
+                                         cbtable.execute_callbacks(ON_STATE_EXIT | LOADING_OUT);
                                      }
-
     );
 }
 };

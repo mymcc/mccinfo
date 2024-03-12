@@ -44,7 +44,7 @@ class callback_table {
         std::unordered_map<uint64_t, std::deque<std::function<void()>>>;
 
   public:
-    void execute_callback(uint64_t key) {
+    void execute_callbacks(uint64_t key) {
         if (auto it = table_.find(key); it != table_.end()) {
             for (auto &cb : it->second) {
                 cb();

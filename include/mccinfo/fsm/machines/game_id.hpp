@@ -49,35 +49,67 @@ struct game_id {
 
         boost::sml::state<none> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         cbtable.execute_callback(ON_STATE_ENTRY | NONE);
+                                         cbtable.execute_callbacks(ON_STATE_ENTRY | NONE);
                                      },
         boost::sml::state<haloce> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         cbtable.execute_callback(ON_STATE_ENTRY | HALOCE);
+                                         cbtable.execute_callbacks(ON_STATE_ENTRY | HALOCE);
                                      },
         boost::sml::state<halo2> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         cbtable.execute_callback(ON_STATE_ENTRY | HALO2);
+                                         cbtable.execute_callbacks(ON_STATE_ENTRY | HALO2);
                                      },
         boost::sml::state<halo2a> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         cbtable.execute_callback(ON_STATE_ENTRY | HALO2A);
+                                         cbtable.execute_callbacks(ON_STATE_ENTRY | HALO2A);
                                      },
         boost::sml::state<halo3> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         cbtable.execute_callback(ON_STATE_ENTRY | HALO3);
+                                         cbtable.execute_callbacks(ON_STATE_ENTRY | HALO3);
                                      },
         boost::sml::state<halo3odst> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         cbtable.execute_callback(ON_STATE_ENTRY | HALO3ODST);
+                                         cbtable.execute_callbacks(ON_STATE_ENTRY | HALO3ODST);
                                      },
         boost::sml::state<halo4> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         cbtable.execute_callback(ON_STATE_ENTRY | HALO4);
+                                         cbtable.execute_callbacks(ON_STATE_ENTRY | HALO4);
                                      },
         boost::sml::state<haloreach> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         cbtable.execute_callback(ON_STATE_ENTRY | HALOREACH);
+                                         cbtable.execute_callbacks(ON_STATE_ENTRY | HALOREACH);
+                                     },
+        boost::sml::state<none> + boost::sml::on_exit<_> /
+                                     [](callback_table& cbtable) {
+                                         cbtable.execute_callbacks(ON_STATE_EXIT | NONE);
+                                     },
+        boost::sml::state<haloce> + boost::sml::on_exit<_> /
+                                        [](callback_table &cbtable) {
+                                            cbtable.execute_callbacks(ON_STATE_EXIT | HALOCE);
+                                     },
+        boost::sml::state<halo2> + boost::sml::on_exit<_> /
+                                       [](callback_table &cbtable) {
+                                           cbtable.execute_callbacks(ON_STATE_EXIT | HALO2);
+                                     },
+        boost::sml::state<halo2a> + boost::sml::on_exit<_> /
+                                     [](callback_table& cbtable) {
+                                         cbtable.execute_callbacks(ON_STATE_EXIT | HALO2A);
+                                     },
+        boost::sml::state<halo3> + boost::sml::on_exit<_> /
+                                     [](callback_table& cbtable) {
+                                         cbtable.execute_callbacks(ON_STATE_EXIT | HALO3);
+                                     },
+        boost::sml::state<halo3odst> + boost::sml::on_exit<_> /
+                                     [](callback_table& cbtable) {
+                                         cbtable.execute_callbacks(ON_STATE_EXIT | HALO3ODST);
+                                     },
+        boost::sml::state<halo4> + boost::sml::on_exit<_> /
+                                     [](callback_table& cbtable) {
+                                         cbtable.execute_callbacks(ON_STATE_EXIT | HALO4);
+                                     },
+        boost::sml::state<haloreach> + boost::sml::on_exit<_> /
+                                     [](callback_table& cbtable) {
+                                         cbtable.execute_callbacks(ON_STATE_EXIT | HALOREACH);
                                      }
     );
 }

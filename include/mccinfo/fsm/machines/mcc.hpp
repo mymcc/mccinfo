@@ -26,15 +26,27 @@ struct mcc {
 
         boost::sml::state<off> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         cbtable.execute_callback(ON_STATE_ENTRY | OFF);
+                                         cbtable.execute_callbacks(ON_STATE_ENTRY | OFF);
                                      },
         boost::sml::state<launching> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         cbtable.execute_callback(ON_STATE_ENTRY | LAUNCHING);
+                                         cbtable.execute_callbacks(ON_STATE_ENTRY | LAUNCHING);
                                      },
         boost::sml::state<on> + boost::sml::on_entry<_> /
                                      [](callback_table& cbtable) {
-                                         cbtable.execute_callback(ON_STATE_ENTRY | ON);
+                                         cbtable.execute_callbacks(ON_STATE_ENTRY | ON);
+                                     },
+        boost::sml::state<off> + boost::sml::on_exit<_> /
+                                     [](callback_table& cbtable) {
+                                         cbtable.execute_callbacks(ON_STATE_EXIT | OFF);
+                                     },
+        boost::sml::state<launching> + boost::sml::on_exit<_> /
+                                     [](callback_table& cbtable) {
+                                         cbtable.execute_callbacks(ON_STATE_EXIT | LAUNCHING);
+                                     },
+        boost::sml::state<on> + boost::sml::on_exit<_> /
+                                     [](callback_table& cbtable) {
+                                         cbtable.execute_callbacks(ON_STATE_EXIT | ON);
                                      }
     );
 }
