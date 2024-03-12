@@ -21,10 +21,6 @@ class context {
         return sm_.get_map_info();
     }
 
-    mccinfo::file_readers::theater_file_data get_theater_file_data() const {
-        return sm_.get_theater_file_data();
-    }
-
     std::vector<std::optional<mccinfo::query::MCCInstallInfo>> get_install_info() const {
         return sm_.get_install_info();
     }

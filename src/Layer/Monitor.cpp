@@ -103,6 +103,8 @@ Monitor::Monitor() {
 
 uint32_t GetColorFromTeam(int team, mccinfo::game_hint hint) {
     switch (hint) {
+        case mccinfo::game_hint::HALO1:
+        case mccinfo::game_hint::HALO2:
         case mccinfo::game_hint::HALO3:
         case mccinfo::game_hint::HALOREACH: {
             switch (team) {

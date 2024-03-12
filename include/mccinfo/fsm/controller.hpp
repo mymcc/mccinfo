@@ -20,25 +20,109 @@ namespace fsm {
 
 namespace details {
 
+inline void collect_leftover_autosave_files(const std::filesystem::path& root,
+                                            std::vector<std::filesystem::path>& film_files,
+                                            std::vector<std::filesystem::path>& map_files,
+                                            std::vector<std::filesystem::path>& game_files) {
+    if (std::filesystem::is_directory(root)) {
+        for (const auto &file : std::filesystem::directory_iterator(root)) {
+            if (std::filesystem::is_regular_file(file.path())) {
+                auto extension = file.path().extension();
+                if (extension == ".film") {
+                    film_files.push_back(file);
+                } else if (extension == ".map") {
+                    map_files.push_back(file);
+                } else if (extension == ".game") {
+                    game_files.push_back(file);
+                }
+            }
+        }
+
+        std::sort(map_files.begin(), map_files.end(), utility::by_last_file_write_time);
+        std::sort(game_files.begin(), game_files.end(), utility::by_last_file_write_time);
+
+        if (!map_files.empty())
+            map_files.pop_back();
+
+        if (!game_files.empty())
+            game_files.pop_back();
+    }
+}
+
+inline void move_leftover_autosave_files(const std::filesystem::path &root,
+                                         std::vector<std::filesystem::path> &film_files,
+                                         std::vector<std::filesystem::path> &map_files,
+                                         std::vector<std::filesystem::path> &game_files) {
+
+    for (const auto &file : film_files) {
+        auto target = root / "Movie" / file.filename().generic_string();
+
+        MI_CORE_TRACE("Copying extraneous autosave .FILM file:\n\tSubject: {0}\n\tTo: {1}",
+                      file.generic_string().c_str(), target.generic_string().c_str());
+
+        try {
+            std::filesystem::copy_file(file, target);
+
+            std::filesystem::remove(file);
+        } catch (std::exception &e) {
+            MI_CORE_ERROR("Filesystem Error\nException: {0}", e.what());
+        }
+    }
+    for (const auto &file : map_files) {
+        auto target = root / "Map" / file.filename().generic_string();
+
+        MI_CORE_TRACE("Copying extraneous autosave .MAP file:\n\tSubject: {0}\n\tTo: {1}",
+                      file.generic_string().c_str(), target.generic_string().c_str());
+
+        try {
+            std::filesystem::copy_file(file, target);
+
+            std::filesystem::remove(file);
+        } catch (std::exception &e) {
+            MI_CORE_ERROR("Filesystem Error\nException: {0}", e.what());
+        }
+    }
+    for (const auto &file : game_files) {
+        auto target = root / "GameType" / file.filename().generic_string();
+
+        MI_CORE_TRACE("Copying extraneous autosave .GAME file:\n\tSubject: {0}\n\tTo: {1}",
+                      file.generic_string().c_str(), target.generic_string().c_str());
+
+        try {
+            std::filesystem::copy_file(file, target);
+
+            std::filesystem::remove(file);
+        } catch (std::exception &e) {
+            MI_CORE_ERROR("Filesystem Error\nException: {0}", e.what());
+        }
+    }
+}
+
+inline void flush_leftover_autosave_files(const std::filesystem::path &src) {
+    std::vector<std::filesystem::path> film_files;
+    std::vector<std::filesystem::path> map_files;
+    std::vector<std::filesystem::path> game_files;
+
+    details::collect_leftover_autosave_files(src, film_files, map_files, game_files);
+
+    auto temp_path = std::filesystem::path(
+        utility::ConvertWStringToBytes(query::LookForMCCTempPath().value()).value());
+
+    auto user_content =                                        
+        temp_path /                                           
+            "Temporary/UserContent" /                         
+                src.parent_path().filename().generic_string();
+
+    details::move_leftover_autosave_files(user_content, film_files, map_files, game_files);
+}
+
 class filtering_context {
   public:
 
     bool should_handle_trace_event(const EVENT_RECORD &record,
                                    const krabs::trace_context &trace_context) {
-        bool is_target = (*static_cast<krabs::predicates::details::predicate_base *>(
-            &predicates::filters::accepted_image_loads))(record, trace_context);
-
-        if ((mcc_pid == UINT32_MAX) || 
-            (mcc_pid == record.EventHeader.ProcessId) || 
-            (is_target)) {
-
-            if (is_target) {
-                krabs::schema schema(record, trace_context.schema_locator);
-                krabs::parser parser(schema);
-                std::uint32_t pid = parser.parse<std::uint32_t>(L"ProcessId");
-                if ((pid != mcc_pid) || (pid == UINT32_MAX) || (pid == 0))
-                    return false;
-            }
+        if ((mcc_pid == std::numeric_limits<uint32_t>::max()) || 
+            (mcc_pid == record.EventHeader.ProcessId)) {
             return true;
         }
         return false;
@@ -124,16 +208,8 @@ class filtering_context {
         }
     }
 
-    uint32_t get_mcc_pid() const {
-        return mcc_pid;
-    }
-
-    bool has_performed_identification() const {
-        return done_identification;
-    } 
-
   private:
-    uint32_t mcc_pid = UINT32_MAX;
+    uint32_t mcc_pid = std::numeric_limits<uint32_t>::max();
     bool done_identification = false;
     bool mcc_on = false;
 };
@@ -146,6 +222,7 @@ struct map_info {
 }
 
 struct extended_match_info {
+
     std::optional<std::filesystem::path> base_map_;
     std::optional<std::filesystem::path> carnage_report_;
     std::optional<mccinfo::file_readers::theater_file_data> theater_file_data_;
@@ -172,97 +249,13 @@ template <class = class Dummy> class controller {
     {
         MI_CORE_TRACE("Constructing fsm controller ...");
 
-
         find_mcc_installations();
         add_match_data_collector_callbacks();
         emi_.reset();
 
-
         autosave_client_.set_on_copy_start(
             [&](const std::filesystem::path &src, const std::filesystem::path &dst) {
-
-            std::vector<std::filesystem::path> film_files;
-            std::vector<std::filesystem::path> map_files;
-            std::vector<std::filesystem::path> game_files;
-
-            for (const auto &file : std::filesystem::directory_iterator(src)) {
-                if (std::filesystem::is_regular_file(file.path())) {
-                    if (file.path().extension() == ".film") {
-                        film_files.push_back(file.path());
-                    }
-                    else if (file.path().extension() == ".map") {
-                        map_files.push_back(file.path());
-                    } 
-                    else if (file.path().extension() == ".game") {
-                        game_files.push_back(file.path());
-                    }
-                }
-            }
-
-            std::sort(map_files.begin(), map_files.end(), utility::by_last_file_write_time);
-            std::sort(game_files.begin(), game_files.end(), utility::by_last_file_write_time);
-
-            if (!map_files.empty())
-                map_files.pop_back();
-
-            if (!game_files.empty())
-                game_files.pop_back();
-
-            // find newest .map, remove it, put the rest in usercontent
-            // find newest .game, remove it, put the rest in usercontent
-            // put all .films in usercontent
-
-            std::string temp = "C:\\Users\\xbox\\AppData\\LocalLow\\MCC\\Temporary\\UserContent\\" +
-                               src.parent_path().filename().generic_string();
-
-            for (const auto& file : film_files) {
-                auto target = std::filesystem::path(temp + "\\Movie\\" + file.filename().generic_string());
-
-                MI_CORE_TRACE("Copying extraneous autosave .FILM file:\n\tSubject: {0}\n\tTo: {1}",
-                              file.generic_string().c_str(), target.generic_string().c_str());
-
-                try {
-                    std::filesystem::copy_file(
-                        file, target);
-
-                    std::filesystem::remove(file);
-                }
-                catch (std::exception& e) {
-                    MI_CORE_ERROR("Filesystem Error\nException: {0}", e.what());
-                }
-            }
-            for (const auto &file : map_files) {
-                auto target =
-                    std::filesystem::path(temp + "\\Map\\" + file.filename().generic_string());
-
-                MI_CORE_TRACE("Copying extraneous autosave .MAP file:\n\tSubject: {0}\n\tTo: {1}",
-                              file.generic_string().c_str(), target.generic_string().c_str());
-
-                try {
-                    std::filesystem::copy_file(file, target);
-
-                    std::filesystem::remove(file);
-                } catch (std::exception &e) {
-                    MI_CORE_ERROR("Filesystem Error\nException: {0}", e.what());
-                }
-
-            }
-            for (const auto &file : game_files) {
-                auto target =
-                    std::filesystem::path(temp + "\\GameType\\" + file.filename().generic_string());
-
-                MI_CORE_TRACE("Copying extraneous autosave .GAME file:\n\tSubject: {0}\n\tTo: {1}",
-                              file.generic_string().c_str(), target.generic_string().c_str());
-
-                try {
-                    std::filesystem::copy_file(file, target);
-
-                    std::filesystem::remove(file);
-                } catch (std::exception &e) {
-                    MI_CORE_ERROR("Filesystem Error\nException: {0}", e.what());
-                }
-
-            }
+                details::flush_leftover_autosave_files(src);
         });
 
         MI_CORE_TRACE("Setting autosave destination to: .\\mccinfo_cache\\autosave");
@@ -619,12 +612,11 @@ template <class = class Dummy> class controller {
 
         }
     }
+
     std::string get_map_info() const {
         return mi.map;
     }
-    mccinfo::file_readers::theater_file_data get_theater_file_data() const {
-        return file_data;
-    }
+
     std::vector<std::optional<mccinfo::query::MCCInstallInfo>> get_install_info() const {
         std::vector<std::optional<mccinfo::query::MCCInstallInfo>> installations;
         
