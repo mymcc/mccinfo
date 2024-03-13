@@ -109,6 +109,10 @@ inline void flush_leftover_autosave_files(const std::filesystem::path &src) {
     details::move_leftover_autosave_files(user_content, film_files, map_files, game_files);
 }
 
+inline std::optional<std::filesystem::path> find_first_theater_file(const std::filesystem::path& root) {
+
+}
+
 class filtering_context {
   public:
 
@@ -438,43 +442,16 @@ template <class = class Dummy> class controller {
                 autosave_client_.set_flatten_on_write(true);
 
                 autosave_client_.set_on_complete([this, target_data](const std::filesystem::path &src, const
-                                                                  std::filesystem::path &path) {
+                                                                  std::filesystem::path &dst) {
 
-                    mccinfo::game_hint hint_ = target_data.second;
-                    
                     MI_CORE_TRACE("autosave_client post_callback executed with\n\tsrc_: {0}\n\tdst_: {1}", 
-                        src.generic_string().c_str(), 
-                        path.generic_string().c_str());
+                        src.generic_string().c_str(),
+                        dst.generic_string().c_str()
+                    );
                     
-                    if (std::filesystem::exists(path) && std::filesystem::is_directory(path)) {
-                        for (const auto &entry : std::filesystem::directory_iterator(path)) {
-                            const auto &path2 = entry.path();
-                            MI_CORE_TRACE("Looking for theater file data: {0}",
-                                          path2.generic_string().c_str()
-                            );
+                    
+                    update_theater_file_data(dst, target_data.second);
 
-                            if (std::filesystem::is_regular_file(path2)) {
-                                if ((path2.extension().generic_string() == ".temp") ||
-                                    (path2.extension().generic_string() == ".film")) {
-                                    MI_CORE_INFO("Setting Extended Match Info Theater File to: {0}", 
-                                        path2.generic_string().c_str()
-                                    );
-
-                                    try {
-                                        this->emi_.theater_file_data_ = file_readers::ReadTheaterFile(std::filesystem::canonical(path2), hint_);
-                                    }
-                                    catch (std::exception& e) {
-                                        MI_CORE_ERROR("fsm controller failed to read theater file data from {0} with exception: {1}", 
-                                            std::filesystem::canonical(path2).generic_string().c_str(), 
-                                            e.what()
-                                        );
-
-                                        this->emi_.theater_file_data_ = std::nullopt;
-                                    }
-                                }
-                            }
-                        }
-                    }
                 });
 
                 //{
@@ -719,6 +696,39 @@ template <class = class Dummy> class controller {
         autosave_root /= "autosave";
 
         return { autosave_root, hint };
+    }
+
+    void update_theater_file_data(const std::filesystem::path& dst, game_hint hint) {
+        if (std::filesystem::exists(dst) && std::filesystem::is_directory(dst)) {
+            for (const auto& entry : std::filesystem::directory_iterator(dst)) {
+                const auto& file = entry.path();
+
+                MI_CORE_TRACE("Looking for theater file data: {0}",
+                    file.generic_string().c_str()
+                );
+
+                if (std::filesystem::is_regular_file(file)) {
+                    if ((file.extension().generic_string() == ".temp") ||
+                        (file.extension().generic_string() == ".film")) {
+                        MI_CORE_INFO("Setting Extended Match Info Theater File to: {0}",
+                            file.generic_string().c_str()
+                        );
+
+                        try {
+                            this->emi_.theater_file_data_ = file_readers::ReadTheaterFile(std::filesystem::canonical(file), hint);
+                        }
+                        catch (const std::exception& e) {
+                            MI_CORE_ERROR("fsm controller failed to read theater file data from {0} with exception: {1}",
+                                std::filesystem::canonical(file).generic_string().c_str(),
+                                e.what()
+                            );
+
+                            this->emi_.theater_file_data_ = std::nullopt;
+                        }
+                    }
+                }
+            }
+        }
     }
 
   private:
