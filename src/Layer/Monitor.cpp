@@ -233,17 +233,17 @@ void Monitor::OnUIRender() {
 
     ImGui::Begin("Monitor");
     
-    auto iis = context_->get_install_info();
-    for (const auto &ii : iis) {
-      if (ii.has_value()) {
-        std::wostringstream woss;
-        woss << ii.value();
-        auto bytes = utility::ConvertWStringToBytes(woss.str());
-        if (bytes.has_value()) {
-            ImGui::TextWrapped("%s", bytes.value().c_str());
-        }
-      }
-    }
+    //auto iis = context_->get_install_info();
+    //for (const auto &ii : iis) {
+    //  if (ii.has_value()) {
+    //    std::wostringstream woss;
+    //    woss << ii.value();
+    //    auto bytes = utility::ConvertWStringToBytes(woss.str());
+    //    if (bytes.has_value()) {
+    //        ImGui::TextWrapped("%s", bytes.value().c_str());
+    //    }
+    //  }
+    //}
     
     ImGui::Text("MCC:");
     ImGui::SameLine();
@@ -255,7 +255,7 @@ void Monitor::OnUIRender() {
     ImGui::Text("(%s)", game_id_state.c_str());
     ImGui::Text("Map:");
     ImGui::SameLine();
-    ImGui::Text("(%s)", context_->get_map_info().c_str());
+    ImGui::TextWrapped("(%s)", context_->get_map_info().c_str());
 
 
     DoTheaterFileInfo();

@@ -679,11 +679,16 @@ class halo4_theater_file_reader : public theater_file_reader {
 
         ifs.seekg(0);
         ifs.seekg(gametype_offset);
-
+        if (!ifs) {
+            return std::nullopt;
+        }
         std::vector<char> buffer;
         buffer.resize(256);
 
         ifs.read(&buffer.data()[0], 256);
+        if (ifs.fail()) {
+            return std::nullopt;
+        }
 
         std::wstring wstr(reinterpret_cast<const wchar_t *>(buffer.data()));
 
@@ -700,13 +705,17 @@ class halo4_theater_file_reader : public theater_file_reader {
 
         ifs.seekg(0);
         ifs.seekg(desc_offset);
-
+        if (!ifs) {
+            return std::nullopt;
+        }
         unsigned long long desc_length = 256;
         std::vector<char> buffer;
         buffer.resize(desc_length);
 
         ifs.read(&buffer.data()[0], desc_length);
-
+        if (ifs.fail()) {
+            return std::nullopt;
+        }
         std::wstring wstr(reinterpret_cast<const wchar_t *>(buffer.data()), buffer.size());
 
         auto bytes = utility::ConvertWStringToBytes(wstr);
@@ -722,12 +731,19 @@ class halo4_theater_file_reader : public theater_file_reader {
 
         ifs.seekg(0);
         ifs.seekg(xuid_offset);
+        if (!ifs) {
+            return std::nullopt;
+
+        }
         std::vector<char> buffer;
         buffer.resize(8);
 
         size_t i = 0;
         for (auto &b : buffer) {
             ifs.read(&buffer.data()[i], 1);
+            if (ifs.fail()) {
+                return std::nullopt;
+            }
             ++i;
         }
 
@@ -750,11 +766,17 @@ class halo4_theater_file_reader : public theater_file_reader {
 
         ifs.seekg(0);
         ifs.seekg(author_offset);
+        if (!ifs) {
+            return std::nullopt;
+        }
+
         std::vector<char> buffer;
         buffer.resize(16);
 
         ifs.read(&buffer.data()[0], 16);
-
+        if (ifs.fail()) {
+            return std::nullopt;
+        }
         std::string str(buffer.data());
         return str;
     }
@@ -766,11 +788,20 @@ class halo4_theater_file_reader : public theater_file_reader {
 
         ifs.seekg(0);
         ifs.seekg(duration_offset);
+        if (!ifs) {
+            return std::nullopt;
+        }
 
         char buffer[3];
         buffer[2] = '\0';
         ifs.read(&buffer[0], 1);
+        if (ifs.fail()) {
+            return std::nullopt;
+        }
         ifs.read(&buffer[1], 1);
+        if (ifs.fail()) {
+            return std::nullopt;
+        }
         char t = buffer[0];
         buffer[0] = buffer[1];
         buffer[1] = t;
@@ -795,8 +826,14 @@ class halo4_theater_file_reader : public theater_file_reader {
         auto match_length = std::chrono::seconds(strtoul(ret.str().c_str(), NULL, 16));
 
         ifs.seekg(timestamp_offset);
+        if (!ifs) {
+            return std::nullopt;
+        }
         char buffer2[128];
         ifs.read(buffer2, 128);
+        if (ifs.fail()) {
+            return std::nullopt;
+        }
         // ifs.close();
 
         std::tm tm = {};
@@ -832,6 +869,9 @@ class halo4_theater_file_reader : public theater_file_reader {
 
         ifs.seekg(0);
         ifs.seekg(head_offset);
+        if (!ifs) {
+            return std::nullopt;
+        }
 
         std::set<player_info> player_set;
 
@@ -840,6 +880,9 @@ class halo4_theater_file_reader : public theater_file_reader {
             bool current_is_empty_region = true;
             char buf[1];
             ifs.read(&buf[0], 1);
+            if (ifs.fail()) {
+                return std::nullopt;
+            }
             if (buf[0] == '\0') {
                 ++empty_region_count;
                 if (empty_region_count >= 2) {
@@ -852,6 +895,9 @@ class halo4_theater_file_reader : public theater_file_reader {
 
             // reset
             ifs.seekg(-1, std::ios_base::cur);
+            if (!ifs) {
+                return std::nullopt;
+            }
 
             if (!current_is_empty_region) {
                 // read player name
@@ -859,6 +905,9 @@ class halo4_theater_file_reader : public theater_file_reader {
                 buffer.resize(32);
 
                 ifs.read(&buffer.data()[0], 32);
+                if (ifs.fail()) {
+                    return std::nullopt;
+                }
 
                 std::wstring wstr(reinterpret_cast<const wchar_t *>(buffer.data()));
 
@@ -870,17 +919,31 @@ class halo4_theater_file_reader : public theater_file_reader {
                 char team_buf[1];
                 // go to team
                 ifs.seekg(328 - 72, std::ios_base::cur);
+                if (!ifs) {
+                    return std::nullopt;
+                }
                 ifs.read(&team_buf[0], 1);
-
+                if (ifs.fail()) {
+                    return std::nullopt;
+                }
                 if (success) {
                     player_set.insert({team_buf[0], bytes.value()});
                 }
 
                 ifs.seekg(-1, std::ios_base::cur);
+                if (!ifs) {
+                    return std::nullopt;
+                }
                 ifs.seekg(40, std::ios_base::cur);
+                if (!ifs) {
+                    return std::nullopt;
+                }
 
             } else {
                 ifs.seekg(328, std::ios_base::cur);
+                if (!ifs) {
+                    return std::nullopt;
+                }
             }
 
             // skip to next player

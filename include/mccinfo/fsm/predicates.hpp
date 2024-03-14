@@ -304,7 +304,7 @@ inline krabs::predicates::all_of main_menu_background_video_file_created({
     &fio::file_create
 });
 
-inline krabs::predicates::all_of map_file_created({
+inline krabs::predicates::all_of non_generic_map_file_created({
     &likely_is::map_file,
     &certainly_not::map_info_file,
     &certainly_not::cache_map_file,
