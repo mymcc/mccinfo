@@ -368,6 +368,19 @@ inline std::vector<std::wstring> GetLoadedModulesFromProcessID(DWORD processID) 
     return modules;
 }
 
+inline std::optional<std::wstring> GetModuleFullPathnameW(HMODULE hMod) {
+    std::vector<wchar_t> filename(MAX_PATH);
+    std::vector<wchar_t> pathname(MAX_PATH);
+    DWORD success = GetModuleFileNameW(hMod, filename.data(), (DWORD)filename.size());
+    if (success) {
+        success = GetFullPathNameW(filename.data(), (DWORD)filename.size(), pathname.data(), NULL);
+        if (success) {
+            return std::wstring(pathname.data(), pathname.size());
+        }
+    }
+    return std::nullopt;
+}
+
 inline int GetImageEncoderClsid(const WCHAR *format, CLSID *pClsid) {
     UINT num = 0;
     UINT size = 0;

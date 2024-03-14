@@ -13,6 +13,11 @@ namespace mccinfo {
 namespace fsm {
 namespace details {
 
+inline std::filesystem::path get_module_root() {
+    HMODULE hmod = GetModuleHandleW(NULL);
+    return std::filesystem::path(utility::GetModuleFullPathnameW(hmod).value()).parent_path();
+}
+
 inline void collect_leftover_autosave_files(const std::filesystem::path& root,
                                             std::vector<std::filesystem::path>& film_files,
                                             std::vector<std::filesystem::path>& map_files,
@@ -111,6 +116,79 @@ inline void flush_leftover_autosave_files(const std::filesystem::path &src) {
 
 inline std::optional<std::filesystem::path> find_first_theater_file(const std::filesystem::path& root) {
 
+}
+inline std::optional<std::filesystem::path> find_matching_carnage_report(const std::filesystem::path& from_root, 
+    const std::filesystem::path& carnage_report) {
+    for (const auto& file : std::filesystem::directory_iterator(from_root)) {
+        MI_CORE_TRACE("Comparing: {0} to {1}",
+            file.path().generic_string().c_str(),
+            carnage_report.generic_string().c_str());
+
+        if (std::filesystem::is_regular_file(file.path())) {
+            if (file.path().filename() == carnage_report.filename()) {
+                MI_CORE_INFO("Found carnage report: {0}",
+                    file.path().generic_string().c_str());
+                return file.path();
+            }
+        }
+    }
+    return std::nullopt;
+}
+
+inline void copy_matching_carnage_report(const std::filesystem::path& from_root,
+    const std::filesystem::path& to_root,
+    const std::filesystem::path& carnage_report) {
+
+    auto to = to_root / carnage_report.filename();
+    auto cr_file = details::find_matching_carnage_report(from_root, carnage_report);
+
+    if (cr_file.has_value()) {
+        try {
+            MI_CORE_INFO("Copying carnage report: {0}",
+                cr_file.value().generic_string().c_str());
+            std::filesystem::copy_file(cr_file.value(), to);
+        }
+        catch (std::exception& e) {
+            MI_CORE_ERROR("Error copying file {0}\nException: {1}",
+                cr_file.value().generic_string().c_str(),
+                e.what());
+        }
+    }
+}
+inline std::vector<std::filesystem::path> collect_carnage_reports(const std::filesystem::path& root) {
+    std::vector<std::filesystem::path> carnage_reports;
+    for (const auto& file : std::filesystem::directory_iterator(root)) {
+        if (std::filesystem::is_regular_file(file.path()) && file.path().has_extension()) {
+            if (file.path().extension().generic_string() == ".xml") {
+                carnage_reports.push_back(file.path());
+            }
+        }
+    }
+    return carnage_reports;
+}
+
+inline void copy_latest_carnage_report(const std::filesystem::path& from_root,
+    const std::filesystem::path& to_root) {
+
+    auto carnage_reports = collect_carnage_reports(from_root);
+
+    if (!carnage_reports.empty())
+    {
+        std::sort(carnage_reports.begin(), carnage_reports.end(), utility::by_last_file_write_time);
+        auto latest_cr = carnage_reports.back();
+
+        MI_CORE_INFO("Copying carnage report: {0}", latest_cr.generic_string().c_str());
+
+        auto to = to_root / latest_cr.filename();
+        try {
+            std::filesystem::copy_file(latest_cr, to);
+        }
+        catch (std::exception& e) {
+            MI_CORE_ERROR("Error copying file {0}\nException: {1}",
+                latest_cr.generic_string().c_str(), e.what()
+            );
+        }
+    }
 }
 
 class filtering_context {
@@ -242,22 +320,33 @@ template <class = class Dummy> class controller {
         user_sm{cbtable},
         game_id_sm{cbtable},
         cb_table_{cbtable},
-        autosave_client_("", "", "TScopy_x64.exe")
+        autosave_client_("", "", "TScopy_x64.exe"),
+        module_root_(details::get_module_root()),
+        mcc_temp_root_(query::LookForMCCTempPath().value())
     {
+        emi_.reset();
+
         MI_CORE_TRACE("Constructing fsm controller ...");
 
+        MI_CORE_TRACE("Looking for MCC Installations ...");
         find_mcc_installations();
+        
+        MI_CORE_TRACE("Adding Match Data collector callbacks to fsm ...");
         add_match_data_collector_callbacks();
-        emi_.reset();
 
         autosave_client_.set_on_copy_start(
             [&](const std::filesystem::path &src, const std::filesystem::path &dst) {
                 details::flush_leftover_autosave_files(src);
         });
 
-        MI_CORE_TRACE("Setting autosave destination to: .\\mccinfo_cache\\autosave");
+        MI_CORE_TRACE("MCC temp root: {0}", mcc_temp_root_);
+        MI_CORE_TRACE("Module root: {0}", module_root_);
+        cache_root_ = module_root_ / "mccinfo_cache";
+        autosave_root_ = cache_root_ / "autosave";
+        matches_root_ = cache_root_ / "matches";
 
-        autosave_client_.set_copy_dst(".\\mccinfo_cache\\autosave");
+        MI_CORE_TRACE("Setting autosave destination to: {0}", autosave_root_);
+        autosave_client_.set_copy_dst(autosave_root_);
 
         MI_CORE_TRACE("Starting autosave client ...");
         autosave_client_.start();
@@ -266,172 +355,14 @@ template <class = class Dummy> class controller {
     void handle_trace_event(const EVENT_RECORD &record, const krabs::trace_context &trace_context) {
         utility::atomic_guard lk(lock);
 
-        bool before_was_not_loading_in = !user_sm.is(boost::sml::state<states::loading_in>);
-        bool before_was_not_loading_out = !user_sm.is(boost::sml::state<states::loading_out>);
-        bool before_was_not_in_game = !user_sm.is(boost::sml::state<states::in_game>);
-
         if (fc.should_handle_trace_event(record, trace_context)) {
             fc.mcc_sm_event_wrapper(*this, mcc_sm, record, trace_context);
             fc.user_sm_event_wrapper(*this, user_sm, game_id_sm, record, trace_context);
             handle_trace_event_impl<decltype(game_id_sm)>(game_id_sm, record, trace_context);
 
-            if (should_id_map) {
+            if (predicates::events::map_file_created(record, trace_context) && should_id_map) {
                 // make predicate event more clear (specific map pred)
-                if (predicates::events::map_file_created(record, trace_context)) {
-                    krabs::schema schema(record, trace_context.schema_locator);
-                    krabs::parser parser(schema);
-                    std::wstring filename = parser.parse<std::wstring>(L"OpenPath");
-                    auto bytes = utility::ConvertWStringToBytes(filename);
-                    if (bytes.has_value()) {
-                        mi.map = bytes.value();
-                        emi_.base_map_ = bytes.value();
-                    }
-                    should_id_map = false;
-                }   
-            }
-
-            if (should_copy_cr) {
-                // should really be on LOADING_OUT | STATE_EXIT
-                if (!user_sm.is(boost::sml::state<states::loading_out>) &&
-                    !user_sm.is(boost::sml::state<states::in_game>)) {
-
-                    if (emi_.carnage_report_.has_value()) {
-                        std::filesystem::path to = std::filesystem::path(".\\mccinfo_cache\\autosave") /
-                                                    emi_.carnage_report_.value().filename();
-
-                        auto temp = query::LookForMCCTempPath();
-                        if (temp.has_value()) {
-                            auto cr_parent = std::filesystem::path(temp.value()) / "Temporary";
-                            for (const auto &file : std::filesystem::directory_iterator(cr_parent)) {
-                                MI_CORE_TRACE("Comparing: {0} to {1}", 
-                                    file.path().generic_string().c_str(),
-                                    emi_.carnage_report_.value().generic_string().c_str());
-
-                                if (std::filesystem::is_regular_file(file.path())) {
-                                    if (file.path().filename() == emi_.carnage_report_.value().filename()) {
-                                        MI_CORE_INFO("Copying carnage report: {0}", 
-                                            file.path().generic_string().c_str());
-
-                                        try {
-                                            std::filesystem::copy_file(file.path(), to);
-                                        } catch (std::exception &e) {
-                                            MI_CORE_ERROR("Error copying file {0}\nException: {1}",
-                                                          file.path().generic_string().c_str(),
-                                                          e.what());
-                                        }
-                                        break;
-                                    }
-                                }
-                            }
-
-                        }
-                    
-                    }
-                    // we didn't identify a cr on exit (likely firefight or campaign)
-                    else 
-                    {
-                        MI_CORE_WARN("No carnage report identified on loading_out, searching MCC Temp Path for latest carnage report ...");
-
-                        auto temp = query::LookForMCCTempPath();
-                        if (temp.has_value()) {
-                            auto cr_parent = std::filesystem::path(temp.value()) / "Temporary";
-
-                        
-                            std::filesystem::path latest_cr;
-                            std::filesystem::file_time_type latest_cr_write =
-                                std::filesystem::file_time_type::clock::time_point(std::chrono::seconds(0));
-
-                            for (const auto &file : std::filesystem::directory_iterator(cr_parent)) {
-                                if (std::filesystem::is_regular_file(file.path()) && file.path().has_extension()) {
-                                    if (file.path().extension().generic_string() == ".xml") {
-
-                                        bool newer = file.last_write_time() > latest_cr_write;
-
-                                        MI_CORE_TRACE("Comparing write times: ({0} > {1}) ? => {2}",
-                                                      file.path().generic_string().c_str(),
-                                                      latest_cr.generic_string().c_str(),
-                                                      (newer) ? "true" : "false"
-                                        );
-
-                                        if (newer) {
-                                            MI_CORE_WARN("Latest carnage report is now: {0}",
-                                                         file.path().generic_string().c_str()
-                                            );
-
-                                            latest_cr = file.path();
-                                            latest_cr_write = file.last_write_time();
-                                        }
-                                    }
-                                }
-                            }
-
-                            MI_CORE_INFO("Copying carnage report: {0}",
-                                         latest_cr.generic_string().c_str());
-
-                            std::filesystem::path to =
-                                std::filesystem::path(".\\mccinfo_cache\\autosave") /
-                                latest_cr.filename();
-                            try {
-                                std::filesystem::copy_file(latest_cr, to);
-                            }
-                            catch (std::exception& e) {
-                                MI_CORE_ERROR("Error copying file {0}\nException: {1}",
-                                              latest_cr.generic_string().c_str(), e.what()
-                                );
-                            }
-
-
-                        
-                        }
-                    }
-
-                    // here carnage reports are chronologically the last file related to the match written,
-                    // therefore on its copy we can also take the autosave cache and make it a match in /matches
-                    std::string iso_basename = utility::CurrentTimestampISO();
-
-                    iso_basename.erase(
-                        std::remove(iso_basename.begin(), iso_basename.end(), ':'),
-                        iso_basename.end());
-
-                    auto match_to = std::filesystem::path(".\\mccinfo_cache\\matches") /
-                                    iso_basename;
-
-                    MI_CORE_TRACE(
-                        "Attempting to construct match with:\n\tbasename: {0}\n\tpath: {1}",
-                        iso_basename.c_str(), match_to.generic_string().c_str());
-
-                    try {
-
-                        std::filesystem::create_directories(match_to);
-                        
-                        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-                        MI_CORE_TRACE("Copying autosave cache to {0}", match_to.generic_string().c_str());
-
-                        std::filesystem::copy(std::filesystem::path(".\\mccinfo_cache\\autosave"),
-                                              match_to);
-                        for (const auto entry : std::filesystem::directory_iterator(
-                            std::filesystem::path(".\\mccinfo_cache\\autosave"))) {
-
-                            if (std::filesystem::is_regular_file(entry.path())) {
-                                MI_CORE_WARN("Removing file: {0}",
-                                             entry.path().generic_string().c_str());
-                                std::filesystem::remove(entry.path());
-                            }
-                        }
-
-                        MI_CORE_INFO("Success?");
-
-                    } catch (std::exception &e) {
-                        MI_CORE_ERROR("Error copying autosave cache\nException: {0}",
-                                        e.what());
-                    }
-
-                    mi.map = "";
-
-                    emi_.reset();
-                    should_copy_cr = false;
-                }
+                id_map(record, trace_context);
             }
 
             if (should_save_autosave) {
@@ -575,8 +506,6 @@ template <class = class Dummy> class controller {
     }
 
     void find_mcc_installations() {
-        MI_CORE_TRACE("Looking for MCC Installations ...");
-
         auto sii = mccinfo::query::LookForSteamInstallInfo();
         if (sii.has_value()) {
             std::wostringstream woss;
@@ -609,7 +538,7 @@ template <class = class Dummy> class controller {
                 RECT sr;
                 GetWindowRect(hwnd, &sr);
 
-                utility::ScreenCapture(sr, L".\\mccinfo_cache\\autosave\\loading_in.jpeg");
+                utility::ScreenCapture(sr, autosave_root_ / "loading_in.jpeg");
             });
 
             cap_t.detach();
@@ -622,7 +551,7 @@ template <class = class Dummy> class controller {
                 RECT sr;
                 GetWindowRect(hwnd, &sr);
 
-                utility::ScreenCapture(sr, L".\\mccinfo_cache\\autosave\\loading_out.jpeg");
+                utility::ScreenCapture(sr, autosave_root_ / "loading_out.jpeg");
             });
 
             cap_t.detach();
@@ -631,7 +560,66 @@ template <class = class Dummy> class controller {
         cb_table_.add_callback(IN_GAME | ON_STATE_ENTRY, [&] {
             should_save_autosave = true;
             should_id_cr = true;
-            should_copy_cr = true;
+        });
+
+        cb_table_.add_callback(LOADING_OUT | ON_STATE_EXIT, [&] {
+            auto from = mcc_temp_root_ / "Temporary";
+            auto to = autosave_root_;
+
+            if (emi_.carnage_report_.has_value()) {
+                MI_CORE_TRACE("");
+                details::copy_matching_carnage_report(from, to, emi_.carnage_report_.value());
+            }
+
+            else // we didn't identify a cr on exit (likely firefight or campaign)
+            {
+                MI_CORE_WARN("No carnage report identified on loading_out, searching {0} for latest carnage report ...", from);
+                details::copy_latest_carnage_report(from, to);
+
+            }
+
+            // here carnage reports are chronologically the last file related to the match written,
+            // therefore on its copy we can also take the autosave cache and make it a match in /matches
+            std::string iso_basename = utility::CurrentTimestampISO();
+
+            iso_basename.erase(
+                std::remove(iso_basename.begin(), iso_basename.end(), ':'),
+                iso_basename.end());
+
+            auto match_to = matches_root_ / iso_basename;
+
+            MI_CORE_TRACE(
+                "Attempting to construct match with:\n\tbasename: {0}\n\tpath: {1}",
+                iso_basename.c_str(), match_to.generic_string().c_str());
+
+            try {
+
+                std::filesystem::create_directories(match_to);
+
+                MI_CORE_TRACE("Copying autosave cache to {0}", match_to.generic_string().c_str());
+
+                std::filesystem::copy(autosave_root_, match_to);
+                for (const auto entry : std::filesystem::directory_iterator(
+                    autosave_root_)) {
+
+                    if (std::filesystem::is_regular_file(entry.path())) {
+                        MI_CORE_WARN("Removing file: {0}",
+                            entry.path().generic_string().c_str());
+                        std::filesystem::remove(entry.path());
+                    }
+                }
+
+                MI_CORE_INFO("Success?");
+
+            }
+            catch (const std::exception& e) {
+                MI_CORE_ERROR("Error copying autosave cache\nException: {0}",
+                    e.what());
+            }
+
+            mi.map = "";
+
+            emi_.reset();
         });
         
         //cb_table_.add_callback(LOADING_OUT | ON_STATE_ENTRY, [&] {
@@ -643,13 +631,24 @@ template <class = class Dummy> class controller {
         //});
     }
 
-    void id_carnage_report(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+    void id_map(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
         krabs::schema schema(record, trace_context.schema_locator);
         krabs::parser parser(schema);
         std::wstring filename = parser.parse<std::wstring>(L"OpenPath");
         auto bytes = utility::ConvertWStringToBytes(filename);
         if (bytes.has_value()) {
             mi.map = bytes.value();
+            emi_.base_map_ = bytes.value();
+            should_id_map = false;
+        }
+    }
+
+    void id_carnage_report(const EVENT_RECORD& record, const krabs::trace_context& trace_context) {
+        krabs::schema schema(record, trace_context.schema_locator);
+        krabs::parser parser(schema);
+        std::wstring filename = parser.parse<std::wstring>(L"OpenPath");
+        auto bytes = utility::ConvertWStringToBytes(filename);
+        if (bytes.has_value()) {
             emi_.carnage_report_ = bytes.value();
             emi_.carnage_report_.value().replace_extension();
             should_id_cr = false;
@@ -749,6 +748,11 @@ template <class = class Dummy> class controller {
     file_readers::theater_file_data file_data;
 
     extended_match_info emi_;
+    std::filesystem::path mcc_temp_root_;
+    std::filesystem::path module_root_;
+    std::filesystem::path cache_root_;
+    std::filesystem::path autosave_root_;
+    std::filesystem::path matches_root_;
 
     details::map_info mi;
 
@@ -760,7 +764,6 @@ template <class = class Dummy> class controller {
     bool should_id_map = false;
     bool should_save_autosave = false;
     bool should_id_cr = false;
-    bool should_copy_cr = false;
 
   private: // filtering
     bool log_full = false;
