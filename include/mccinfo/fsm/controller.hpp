@@ -210,6 +210,62 @@ inline void copy_latest_carnage_report(const std::filesystem::path& from_root,
     }
 }
 
+inline std::optional<std::filesystem::path> find_matching_theater_file(
+    const std::filesystem::path &in,
+    const std::filesystem::path &theater_file) {
+    std::vector<std::filesystem::path> theater_files;
+    std::filesystem::recursive_directory_iterator begin(in), end;
+
+    std::copy_if(
+        begin, end, std::back_inserter(theater_files), 
+        [](const std::filesystem::directory_entry &entry) {
+            if (entry.is_regular_file() && entry.path().has_extension()) {
+                return (entry.path().extension() == ".film" || entry.path().extension() == ".mov");
+            }
+            return false;
+        });
+    auto found_it =
+        std::find_if(theater_files.begin(), theater_files.end(), [&](const std::filesystem::path &file) {
+            auto stem1 = file.stem().generic_string();
+            auto stem2 = theater_file.stem().generic_string();
+
+            std::transform(stem1.begin(), stem1.end(), stem1.begin(), ::toupper);
+            std::transform(stem2.begin(), stem2.end(), stem2.begin(), ::toupper);
+
+            return stem1.find(stem2) != std::string::npos;
+        });
+
+    if (found_it != theater_files.end()) {
+        return *found_it;
+    } else {
+        return std::nullopt;
+    }
+}
+
+inline bool copy_matching_theater_file(const std::filesystem::path &from,
+                                       const std::filesystem::path &in,
+                                       const std::filesystem::path &to) {
+    MI_CORE_TRACE("copy_matching_theater_file():\n\tfrom: {0}\n\tin: {1}\n\tto: {2}", from, in, to);
+    auto file = find_first_theater_file(from);
+    if (file.has_value()) {
+        MI_CORE_TRACE("match file: {0}", file.value());
+        auto match = find_matching_theater_file(in, file.value());
+        if (match.has_value()) {
+            MI_CORE_TRACE("match found: {0}", match.value());
+            auto match_to = to / match.value().filename();
+            try {
+                std::filesystem::copy_file(match.value(), match_to);
+                MI_CORE_INFO("{0} successfully copied to {1}", match.value(), match_to);
+                return true;
+            }
+            catch(const std::exception& e) {
+                MI_CORE_ERROR("Error occurred {0}", e.what());
+            }
+        }
+    }
+    return false;
+}
+
 class filtering_context {
   public:
 
@@ -405,34 +461,34 @@ template <class = class Dummy> class controller {
                 
                 autosave_client_.request_copy(1000);
 
-                autosave_thread_ = std::thread([&] {
-                    while (true) {
-                        std::this_thread::sleep_for(std::chrono::milliseconds(20000));
-
-                        {
-                            std::unique_lock<std::mutex> lock(autosave_mut_);
-                
-                            MI_CORE_TRACE("autosave thread acquired lock");
-                
-                            if (stop_autosave_) {
-                                stop_autosave_ = false;
-                                MI_CORE_TRACE("autosave thread quitting");
-                                break;
-                            }
-                        }
-                
-                        try {
-                            MI_CORE_TRACE("autosave thread requesting copy");
-                            autosave_client_.request_copy(0);
-                            MI_CORE_WARN("autosave_thread: copy request success");
-                        }
-                        catch (const std::exception& e) {
-                            MI_CORE_WARN("autosave_thread: failed to request copy: \n\tException: {0}", e.what());
-                        }
-                    }
-                });
-
-                autosave_thread_.detach();
+                //autosave_thread_ = std::thread([&] {
+                //    while (true) {
+                //        std::this_thread::sleep_for(std::chrono::milliseconds(20000));
+                //
+                //        {
+                //            std::unique_lock<std::mutex> lock(autosave_mut_);
+                //
+                //            MI_CORE_TRACE("autosave thread acquired lock");
+                //
+                //            if (stop_autosave_) {
+                //                stop_autosave_ = false;
+                //                MI_CORE_TRACE("autosave thread quitting");
+                //                break;
+                //            }
+                //        }
+                //
+                //        try {
+                //            MI_CORE_TRACE("autosave thread requesting copy");
+                //            autosave_client_.request_copy(0);
+                //            MI_CORE_WARN("autosave_thread: copy request success");
+                //        }
+                //        catch (const std::exception& e) {
+                //            MI_CORE_WARN("autosave_thread: failed to request copy: \n\tException: {0}", e.what());
+                //        }
+                //    }
+                //});
+                //
+                //autosave_thread_.detach();
 
                 should_save_autosave = false;
             }
@@ -552,16 +608,18 @@ template <class = class Dummy> class controller {
         });
 
         cb_table_.add_callback(LOADING_OUT | ON_STATE_ENTRY, [&] {
-            std::thread cap_t([&] {
-                HWND hwnd = query::LookForMCCWindowHandle().value();
+            if (should_build_match) {
+                std::thread cap_t([&] {
+                    HWND hwnd = query::LookForMCCWindowHandle().value();
 
-                RECT sr;
-                GetWindowRect(hwnd, &sr);
+                    RECT sr;
+                    GetWindowRect(hwnd, &sr);
 
-                utility::ScreenCapture(sr, autosave_root_ / "loading_out.jpeg");
-            });
+                    utility::ScreenCapture(sr, autosave_root_ / "loading_out.jpeg");
+                });
 
-            cap_t.detach();
+                cap_t.detach();
+            }
         });
 
         cb_table_.add_callback(IN_GAME | ON_STATE_ENTRY, [&] {
@@ -571,87 +629,120 @@ template <class = class Dummy> class controller {
         });
 
         cb_table_.add_callback(LOADING_OUT | ON_STATE_EXIT, [&] {
+            if (should_build_match) {
+                std::thread match_t([&] {
+                    std::unique_lock<std::mutex> lock(autosave_data_mut_);
 
-            std::thread match_t([&] {
-                std::unique_lock<std::mutex> lock(autosave_data_mut_);
 
-                auto from = mcc_temp_root_ / "Temporary";
-                auto to = autosave_root_;
 
-                if (emi_.carnage_report_.has_value()) {
-                    MI_CORE_TRACE("");
-                    details::copy_matching_carnage_report(from, to, emi_.carnage_report_.value());
-                }
+                    auto from = mcc_temp_root_ / "Temporary";
+                    auto to = autosave_root_;
 
-                else // we didn't identify a cr on exit (likely firefight or campaign)
-                {
-                    MI_CORE_WARN("No carnage report identified on loading_out, searching {0} for latest carnage report ...", from);
-                    details::copy_latest_carnage_report(from, to);
-                }
+                    if (emi_.carnage_report_.has_value()) {
+                        MI_CORE_TRACE("");
+                        details::copy_matching_carnage_report(from, to, emi_.carnage_report_.value());
+                    }
 
-                // here carnage reports are chronologically the last file related to the match written,
-                // therefore on its copy we can also take the autosave cache and make it a match in /matches
-                std::string iso_basename = utility::CurrentTimestampISO();
+                    else // we didn't identify a cr on exit (likely firefight or campaign)
+                    {
+                        MI_CORE_WARN("No carnage report identified on loading_out, searching {0} for latest carnage report ...", from);
+                        details::copy_latest_carnage_report(from, to);
+                    }
 
-                iso_basename.erase(
-                    std::remove(iso_basename.begin(), iso_basename.end(), ':'),
-                    iso_basename.end());
+                    if (details::copy_matching_theater_file(autosave_root_, mcc_temp_root_,
+                                                            autosave_root_)) {
+                        try {
+                            auto temp_file = details::find_first_theater_file(autosave_root_).value();
+                            std::filesystem::remove(temp_file);
+                        }
+                        catch(const std::exception& e) {
+                            MI_CORE_ERROR("Error removing temp_film: {0}", e.what());
+                        }
+                    }
 
-                auto match_to = matches_root_ / iso_basename;
+                    // here carnage reports are chronologically the last file related to the match written,
+                    // therefore on its copy we can also take the autosave cache and make it a match in /matches
+                    std::string iso_basename = utility::CurrentTimestampISO();
 
-                MI_CORE_TRACE(
-                    "Attempting to construct match with:\n\tbasename: {0}\n\tpath: {1}",
-                    iso_basename.c_str(), match_to.generic_string().c_str());
+                    iso_basename.erase(
+                        std::remove(iso_basename.begin(), iso_basename.end(), ':'),
+                        iso_basename.end());
 
-                try {
+                    auto match_to = matches_root_ / iso_basename;
 
-                    std::filesystem::create_directories(match_to);
+                    MI_CORE_TRACE(
+                        "Attempting to construct match with:\n\tbasename: {0}\n\tpath: {1}",
+                        iso_basename.c_str(), match_to.generic_string().c_str());
 
-                    MI_CORE_TRACE("Copying autosave cache to {0}", match_to.generic_string().c_str());
+                    try {
 
-                    std::filesystem::copy(autosave_root_, match_to);
-                    for (const auto entry : std::filesystem::directory_iterator(
-                        autosave_root_)) {
+                        std::filesystem::create_directories(match_to);
 
-                        if (std::filesystem::is_regular_file(entry.path())) {
-                            if (entry.path().has_extension()) {
-                                if (entry.path().extension() != ".pickle") {
-                                    MI_CORE_TRACE("Removing file: {0}",
-                                                  entry.path().generic_string().c_str());
+                        MI_CORE_TRACE("Copying autosave cache to {0}", match_to.generic_string().c_str());
+
+                        std::filesystem::copy(autosave_root_, match_to);
+                        for (const auto entry : std::filesystem::directory_iterator(
+                            autosave_root_)) {
+
+                            if (std::filesystem::is_regular_file(entry.path())) {
+                                if (entry.path().has_extension()) {
+                                    if (entry.path().extension() != ".pickle") {
+                                        MI_CORE_TRACE("Removing file: {0}",
+                                                      entry.path().generic_string().c_str());
+                                        std::filesystem::remove(entry.path());
+                                    }
+                                }
+                            }
+                        }
+
+                        //cleanup TS_copy's bundled files that somehow make it in error...
+                        for (const auto entry : std::filesystem::directory_iterator(match_to)) {
+                            if (std::filesystem::is_regular_file(entry.path()) && entry.path().has_extension()) {
+                                const auto& extension = entry.path().extension();
+                                if ((extension == ".dll") || (extension == ".pyd") || (extension == ".manifest"))
+                                {
+                                    MI_CORE_WARN("Removing file: {0}",
+                                                 entry.path().generic_string().c_str());
                                     std::filesystem::remove(entry.path());
                                 }
                             }
                         }
+
+                        //should_build_match = false;
+                        MI_CORE_INFO("Success?");
+
+                    }
+                    catch (const std::exception& e) {
+                        MI_CORE_ERROR("Error copying autosave cache\nException: {0}",
+                            e.what());
                     }
 
-                    //cleanup TS_copy's bundled files that somehow make it in error...
-                    for (const auto entry : std::filesystem::directory_iterator(match_to)) {
-                        if (std::filesystem::is_regular_file(entry.path()) && entry.path().has_extension()) {
-                            const auto& extension = entry.path().extension();
-                            if ((extension == ".dll") || (extension == ".pyd") || (extension == ".manifest"))
-                            {
-                                MI_CORE_WARN("Removing file: {0}",
-                                             entry.path().generic_string().c_str());
-                                std::filesystem::remove(entry.path());
-                            }
+                    try {
+                        for (const auto entry : std::filesystem::directory_iterator(autosave_root_)) {
+                            MI_CORE_WARN("Removing file: {0}",entry.path().generic_string().c_str());
+                            std::filesystem::remove(entry.path());
                         }
                     }
+                    catch (const std::exception& e) {
+                        MI_CORE_ERROR("Error deleting files in autosave directory: {0}", e.what());
+                    }
 
-                    should_build_match = false;
-                    MI_CORE_INFO("Success?");
+                    mi.map = "";
+                    emi_.reset();
+                });
 
+                match_t.detach();
+            }
+            else {
+                try {
+                    for (const auto entry : std::filesystem::directory_iterator(autosave_root_)) {
+                        MI_CORE_WARN("Removing file: {0}", entry.path().generic_string().c_str());
+                        std::filesystem::remove(entry.path());
+                    }
+                } catch (const std::exception &e) {
+                    MI_CORE_ERROR("Error deleting files in autosave directory: {0}", e.what());
                 }
-                catch (const std::exception& e) {
-                    MI_CORE_ERROR("Error copying autosave cache\nException: {0}",
-                        e.what());
-                }
-
-                mi.map = "";
-
-                emi_.reset();
-            });
-
-            match_t.detach();
+            }
         });
         
         cb_table_.add_callback(LOADING_OUT | ON_STATE_ENTRY, [&] {
@@ -729,38 +820,42 @@ template <class = class Dummy> class controller {
     void update_theater_file_data(const std::filesystem::path& dst, game_hint hint) {
         std::unique_lock<std::mutex> lock(autosave_data_mut_);
 
-        if (should_build_match) {
-            if (std::filesystem::exists(dst) && std::filesystem::is_directory(dst)) {
-                for (const auto& entry : std::filesystem::directory_iterator(dst)) {
-                    const auto& file = entry.path();
+        bool found_theater_file = false;
+        if (std::filesystem::exists(dst) && std::filesystem::is_directory(dst)) {
+            for (const auto& entry : std::filesystem::directory_iterator(dst)) {
+                const auto& file = entry.path();
 
-                    MI_CORE_TRACE("Looking for theater file data: {0}",
-                        file.generic_string().c_str()
-                    );
+                MI_CORE_TRACE("Looking for theater file data: {0}",
+                    file.generic_string().c_str()
+                );
 
-                    if (std::filesystem::is_regular_file(file)) {
-                        if ((file.extension().generic_string() == ".temp") ||
-                            (file.extension().generic_string() == ".film")) {
-                            MI_CORE_INFO("Setting Extended Match Info Theater File to: {0}",
-                                file.generic_string().c_str()
+                if (std::filesystem::is_regular_file(file)) {
+                    if ((file.extension().generic_string() == ".temp") ||
+                        (file.extension().generic_string() == ".film")) {
+                        MI_CORE_INFO("Setting Extended Match Info Theater File to: {0}",
+                            file.generic_string().c_str()
+                        );
+
+                        found_theater_file = true;
+
+                        try {
+                            this->emi_.theater_file_data_ = file_readers::ReadTheaterFile(std::filesystem::canonical(file), hint);
+                        }
+                        catch (const std::exception& e) {
+                            MI_CORE_ERROR("fsm controller failed to read theater file data from {0} with exception: {1}",
+                                std::filesystem::canonical(file).generic_string().c_str(),
+                                e.what()
                             );
 
-                            try {
-                                this->emi_.theater_file_data_ = file_readers::ReadTheaterFile(std::filesystem::canonical(file), hint);
-                            }
-                            catch (const std::exception& e) {
-                                MI_CORE_ERROR("fsm controller failed to read theater file data from {0} with exception: {1}",
-                                    std::filesystem::canonical(file).generic_string().c_str(),
-                                    e.what()
-                                );
-
-                                this->emi_.theater_file_data_ = std::nullopt;
-                            }
+                            this->emi_.theater_file_data_ = std::nullopt;
                         }
                     }
                 }
             }
         }
+
+        should_build_match = (found_theater_file || 
+            (hint == game_hint::HALO1) || (hint == game_hint::HALO2));
     }
 
   private:
